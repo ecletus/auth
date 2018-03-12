@@ -5,23 +5,60 @@ import (
 
 	"github.com/qor/auth/claims"
 	"github.com/qor/session"
+	"github.com/qor/qor"
 )
 
 // Context context
 type Context struct {
+	*qor.Context
 	*Auth
 	Claims   *claims.Claims
 	Provider Provider
-	Request  *http.Request
-	Writer   http.ResponseWriter
 }
 
 // Flashes get flash messages
 func (context Context) Flashes() []session.Message {
-	return context.Auth.SessionStorer.Flashes(context.Writer, context.Request)
+	return context.Auth.SessionStorer.Flashes(context.SessionManager())
 }
 
 // FormValue get form value with name
 func (context Context) FormValue(name string) string {
 	return context.Request.Form.Get(name)
+}
+
+func (context *Context) Registrable() bool {
+	return context.Auth.Registrable(context)
+}
+
+func (context *Context) AuthURL(path string) string {
+	return context.GenURL(context.Auth.AuthURL(path))
+}
+
+func (context *Context) AuthStaticURL(path string) string {
+	return context.GenStaticURL(context.Auth.AuthURL(path))
+}
+
+func (context *Context) Set(values... interface{})  {
+	for _, value := range values {
+		switch v := value.(type) {
+		case *Auth:
+			context.Auth = v
+		case *claims.Claims:
+			context.Claims = v
+		}
+	}
+}
+
+func NewContextFromRequest(r *http.Request, values... interface{}) (*http.Request, *Context) {
+	r, ctx := qor.NewContextForRequest(r)
+	c := &Context{Context: ctx}
+	c.Set(values...)
+	return r, c
+}
+
+func NewContextFromRequestPair(w http.ResponseWriter, r *http.Request, values... interface{}) (*http.Request, *Context) {
+	r, ctx := qor.NewContextFromRequestPair(w, r)
+	c := &Context{Context: ctx}
+	c.Set(values...)
+	return r, c
 }

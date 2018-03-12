@@ -26,6 +26,7 @@ type GithubProvider struct {
 
 // Config github Config
 type Config struct {
+	Name             string
 	ClientID         string
 	ClientSecret     string
 	AuthorizeURL     string
@@ -65,7 +66,7 @@ func New(config *Config) *GithubProvider {
 				authInfo     auth_identity.Basic
 				authIdentity = reflect.New(utils.ModelType(context.Auth.Config.AuthIdentityModel)).Interface()
 				req          = context.Request
-				tx           = context.Auth.GetDB(req)
+				db           = context.DB
 			)
 
 			state := req.URL.Query().Get("state")
@@ -92,7 +93,7 @@ func New(config *Config) *GithubProvider {
 				authInfo.Provider = provider.GetName()
 				authInfo.UID = fmt.Sprint(*user.ID)
 
-				if !tx.Model(authIdentity).Where(authInfo).Scan(&authInfo).RecordNotFound() {
+				if !db.Model(authIdentity).Where(authInfo).Scan(&authInfo).RecordNotFound() {
 					return authInfo.ToClaims(), nil
 				}
 
@@ -112,7 +113,7 @@ func New(config *Config) *GithubProvider {
 					return nil, err
 				}
 
-				if err = tx.Where(authInfo).FirstOrCreate(authIdentity).Error; err == nil {
+				if err = db.Where(authInfo).FirstOrCreate(authIdentity).Error; err == nil {
 					return authInfo.ToClaims(), nil
 				}
 				return nil, err
@@ -124,9 +125,17 @@ func New(config *Config) *GithubProvider {
 	return provider
 }
 
-// GetName return provider name
-func (GithubProvider) GetName() string {
+// GetDefaultName return provider name
+func (Config) GetDefaultName() string {
 	return "github"
+}
+
+// GetName return provider name
+func (p GithubProvider) GetName() string {
+	if p.Name != "" {
+		return p.Name
+	}
+	return p.GetDefaultName()
 }
 
 // ConfigAuth config auth

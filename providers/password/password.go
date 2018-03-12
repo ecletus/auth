@@ -1,7 +1,6 @@
 package password
 
 import (
-	"html/template"
 	"net/http"
 	"strings"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/qor/auth/providers/password/encryptor"
 	"github.com/qor/auth/providers/password/encryptor/bcrypt_encryptor"
 	"github.com/qor/session"
+	"github.com/moisespsena/template/html/template"
 )
 
 // Config password config
@@ -126,17 +126,17 @@ func (provider Provider) ServeHTTP(context *auth.Context) {
 				switch paths[2] {
 				case "new":
 					// render new confirmation page
-					context.Auth.Config.Render.Execute("auth/confirmation/new", context, context.Request, context.Writer)
+					context.Auth.Config.Render.Execute("auth/confirmation/new", context, context.Context)
 				case "send":
 					var (
 						currentUser interface{}
 						authInfo    auth_identity.Basic
-						tx          = context.Auth.GetDB(req)
+						db          = context.DB
 					)
 
 					authInfo.Provider = provider.GetName()
 					authInfo.UID = strings.TrimSpace(req.Form.Get("email"))
-					if tx.Model(context.Auth.AuthIdentityModel).Where(authInfo).Scan(&authInfo).RecordNotFound() {
+					if db.Model(context.Auth.AuthIdentityModel).Where(authInfo).Scan(&authInfo).RecordNotFound() {
 						err = auth.ErrInvalidAccount
 					}
 
@@ -147,51 +147,51 @@ func (provider Provider) ServeHTTP(context *auth.Context) {
 					}
 
 					if err == nil {
-						context.SessionStorer.Flash(context.Writer, req, session.Message{Message: ConfirmFlashMessage, Type: "success"})
+						context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: ConfirmFlashMessage, Type: "success"})
 						context.Auth.Redirector.Redirect(context.Writer, context.Request, "send_confirmation")
 					}
 				}
 			}
 
 			if err != nil {
-				context.SessionStorer.Flash(context.Writer, req, session.Message{Message: template.HTML(err.Error()), Type: "error"})
+				context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: template.HTML(err.Error()), Type: "error"})
 			}
 			// render new confirmation page
-			context.Auth.Config.Render.Execute("auth/confirmation/new", context, context.Request, context.Writer)
+			context.Auth.Config.Render.Execute("auth/confirmation/new", context, context.Context)
 		case "confirm":
 			// confirm user
 			err := provider.ConfirmHandler(context)
 			if err != nil {
-				context.SessionStorer.Flash(context.Writer, req, session.Message{Message: template.HTML(err.Error()), Type: "error"})
+				context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: template.HTML(err.Error()), Type: "error"})
 				context.Auth.Redirector.Redirect(context.Writer, context.Request, "confirm_failed")
 				return
 			}
 		case "new":
 			// render change password page
-			context.Auth.Config.Render.Execute("auth/password/new", context, context.Request, context.Writer)
+			context.Auth.Config.Render.Execute("auth/password/new", context, context.Context)
 		case "recover":
 			// send recover password mail
 			err := provider.RecoverPasswordHandler(context)
 			if err != nil {
-				context.SessionStorer.Flash(context.Writer, req, session.Message{Message: template.HTML(err.Error()), Type: "error"})
+				context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: template.HTML(err.Error()), Type: "error"})
 				http.Redirect(context.Writer, context.Request, context.Auth.AuthURL("password/new"), http.StatusSeeOther)
 				return
 			}
 		case "edit":
 			// render edit password page
 			if len(paths) == 3 {
-				context.Auth.Config.Render.Funcs(template.FuncMap{
+				context.Auth.Config.Render.Template().Funcs(template.FuncMap{
 					"reset_password_token": func() string { return paths[2] },
-				}).Execute("auth/password/edit", context, context.Request, context.Writer)
+				}).Execute("auth/password/edit", context, context.Context)
 				return
 			}
-			context.SessionStorer.Flash(context.Writer, req, session.Message{Message: template.HTML(ErrInvalidResetPasswordToken.Error()), Type: "error"})
+			context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: template.HTML(ErrInvalidResetPasswordToken.Error()), Type: "error"})
 			http.Redirect(context.Writer, context.Request, context.Auth.AuthURL("password/new"), http.StatusSeeOther)
 		case "update":
 			// update password
 			err := provider.ResetPasswordHandler(context)
 			if err != nil {
-				context.SessionStorer.Flash(context.Writer, req, session.Message{Message: template.HTML(err.Error()), Type: "error"})
+				context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: template.HTML(err.Error()), Type: "error"})
 				http.Redirect(context.Writer, context.Request, context.Auth.AuthURL("password/new"), http.StatusSeeOther)
 				return
 			}

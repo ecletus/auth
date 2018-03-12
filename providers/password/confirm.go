@@ -2,7 +2,6 @@ package password
 
 import (
 	"errors"
-	"html/template"
 	"net/mail"
 	"path"
 	"reflect"
@@ -15,6 +14,7 @@ import (
 	"github.com/qor/mailer"
 	"github.com/qor/qor/utils"
 	"github.com/qor/session"
+	"github.com/moisespsena/template/html/template"
 )
 
 var (
@@ -45,8 +45,7 @@ var DefaultConfirmationMailer = func(email string, context *auth.Context, claims
 		}, mailer.Template{
 			Name:    "auth/confirmation",
 			Data:    context,
-			Request: context.Request,
-			Writer:  context.Writer,
+			Context: context.Context,
 		}.Funcs(template.FuncMap{
 			"current_user": func() interface{} {
 				return currentUser
@@ -64,7 +63,7 @@ var DefaultConfirmHandler = func(context *auth.Context) error {
 	var (
 		authInfo    auth_identity.Basic
 		provider, _ = context.Provider.(*Provider)
-		tx          = context.Auth.GetDB(context.Request)
+		db          = context.DB
 		paths       = strings.Split(context.Request.URL.Path, "/")
 		token       = paths[len(paths)-1]
 	)
@@ -77,7 +76,7 @@ var DefaultConfirmHandler = func(context *auth.Context) error {
 			authInfo.UID = claims.Id
 			authIdentity := reflect.New(utils.ModelType(context.Auth.Config.AuthIdentityModel)).Interface()
 
-			if tx.Where(authInfo).First(authIdentity).RecordNotFound() {
+			if db.Where(authInfo).First(authIdentity).RecordNotFound() {
 				err = auth.ErrInvalidAccount
 			}
 
@@ -85,8 +84,8 @@ var DefaultConfirmHandler = func(context *auth.Context) error {
 				if authInfo.ConfirmedAt == nil {
 					now := time.Now()
 					authInfo.ConfirmedAt = &now
-					if err = tx.Model(authIdentity).Update(authInfo).Error; err == nil {
-						context.SessionStorer.Flash(context.Writer, context.Request, session.Message{Message: ConfirmedAccountFlashMessage, Type: "success"})
+					if err = db.Model(authIdentity).Update(authInfo).Error; err == nil {
+						context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: ConfirmedAccountFlashMessage, Type: "success"})
 						context.Auth.Redirector.Redirect(context.Writer, context.Request, "confirm")
 						return nil
 					}

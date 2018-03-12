@@ -1,13 +1,15 @@
 package authority
 
 import (
-	"html/template"
 	"net/http"
 
+	"github.com/qor/qor"
 	"github.com/qor/auth"
 	"github.com/qor/middlewares"
 	"github.com/qor/roles"
 	"github.com/qor/session"
+	_ "github.com/qor/session/manager"
+	"github.com/moisespsena/template/html/template"
 )
 
 var (
@@ -85,7 +87,7 @@ func (authority *Authority) Authorize(roles ...string) func(http.Handler) http.H
 // NewAccessDeniedHandler new access denied handler
 func NewAccessDeniedHandler(Auth AuthInterface, redirectPath string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		Auth.Flash(w, req, session.Message{Message: AccessDeniedFlashMessage})
+		Auth.Flash(qor.ContextFromRequest(req).SessionManager(), session.Message{Message: AccessDeniedFlashMessage})
 		http.Redirect(w, req, redirectPath, http.StatusSeeOther)
 	}
 }

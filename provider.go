@@ -17,25 +17,18 @@ type Provider interface {
 // RegisterProvider register auth provider
 func (auth *Auth) RegisterProvider(provider Provider) {
 	name := provider.GetName()
-	for _, p := range auth.providers {
-		if p.GetName() == name {
-			fmt.Printf("warning: auth provider %v already registered", name)
-			return
-		}
+	if _, ok := auth.providers[name]; ok {
+		fmt.Printf("warning: auth provider %v already registered", name)
+		return
 	}
 
 	provider.ConfigAuth(auth)
-	auth.providers = append(auth.providers, provider)
+	auth.providers[name] = provider
 }
 
 // GetProvider get provider with name
-func (auth *Auth) GetProvider(name string) Provider {
-	for _, provider := range auth.providers {
-		if provider.GetName() == name {
-			return provider
-		}
-	}
-	return nil
+func (auth *Auth) GetProvider(name string) (Provider) {
+	return auth.providers[name]
 }
 
 // GetProviders return registered providers

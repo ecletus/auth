@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/qor/qor"
 	"github.com/qor/qor/utils"
 )
 
@@ -13,7 +14,8 @@ var ClaimsContextKey utils.ContextKey = "authority_claims"
 // Middleware authority middleware used to record activity time
 func (authority *Authority) Middleware(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		if claims, err := authority.Auth.Get(req); err == nil {
+		sm := qor.ContextFromRequest(req).SessionManager()
+		if claims, err := authority.Auth.Get(sm); err == nil {
 			var zero time.Duration
 
 			lastActiveAt := claims.LastActiveAt
@@ -37,7 +39,7 @@ func (authority *Authority) Middleware(handler http.Handler) http.Handler {
 			now := time.Now()
 			claims.LastActiveAt = &now
 
-			authority.Auth.Update(w, req, claims)
+			authority.Auth.Update(sm, claims)
 		}
 
 		handler.ServeHTTP(w, req)

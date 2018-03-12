@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/qor/auth/claims"
+	"github.com/moisespsena/template/html/template"
 )
 
 // NewServeMux generate http.Handler for auth
@@ -21,10 +22,17 @@ type serveMux struct {
 func (serveMux *serveMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var (
 		claims  *claims.Claims
-		reqPath = strings.TrimPrefix(req.URL.Path, serveMux.URLPrefix)
+		reqPath = strings.TrimPrefix(req.URL.Path, serveMux.URLPrefix + "/")
 		paths   = strings.Split(reqPath, "/")
-		context = &Context{Auth: serveMux.Auth, Claims: claims, Request: req, Writer: w}
 	)
+
+	req, context := NewContextFromRequestPair(w, req, serveMux.Auth, claims)
+
+	render := serveMux.Auth.Render.Template().Funcs(template.FuncMap{
+		"prefix": func() string {
+			return serveMux.Auth.URLPrefix
+		},
+	})
 
 	if len(paths) >= 2 {
 		// render assets
@@ -33,18 +41,34 @@ func (serveMux *serveMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
+		providerName := context.JoinPath(paths[0])
+		provider := serveMux.Auth.GetProvider(providerName)
+
+		if provider == nil {
+			provider = serveMux.Auth.GetProvider(paths[0])
+		}
+
 		// eg: /phone/login
-		if provider := serveMux.Auth.GetProvider(paths[0]); provider != nil {
+		if provider != nil {
 			context.Provider = provider
 
 			// serve mux
 			switch paths[1] {
 			case "login":
-				provider.Login(context)
+				if context.GetCurrentUser(req) != nil {
+					redirectTo := context.GenURL(serveMux.LoginPageRedirectTo)
+					http.Redirect(w, req, redirectTo, http.StatusSeeOther)
+				} else {
+					provider.Login(context)
+				}
 			case "logout":
 				provider.Logout(context)
 			case "register":
-				provider.Register(context)
+				if serveMux.Registrable(context) {
+					provider.Register(context)
+				} else {
+					w.WriteHeader(http.StatusForbidden)
+				}
 			case "callback":
 				provider.Callback(context)
 			default:
@@ -57,10 +81,21 @@ func (serveMux *serveMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		switch paths[0] {
 		case "login":
 			// render login page
-			serveMux.Auth.Render.Execute("auth/login", context, req, w)
+			render.Execute("auth/login", context, context.Context)
+		case "profile":
+			if context.GetCurrentUser(req) != nil {
+				serveMux.Auth.ProfileHandler(context)
+			} else {
+				redirectTo := context.AuthURL("login") + "?return_to="
+				serveMux.Redirector.Redirect(w, req, redirectTo)
+			}
 		case "register":
 			// render register page
-			serveMux.Auth.Render.Execute("auth/register", context, req, w)
+			if serveMux.Registrable(context) {
+				render.Execute("auth/register", context, context.Context)
+			} else {
+				w.WriteHeader(http.StatusForbidden)
+			}
 		case "logout":
 			// destroy login context
 			serveMux.Auth.LogoutHandler(context)

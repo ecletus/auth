@@ -3,7 +3,6 @@ package auth
 import (
 	"crypto/md5"
 	"fmt"
-	"html/template"
 	"mime"
 	"net/http"
 	"path"
@@ -14,6 +13,7 @@ import (
 	"github.com/qor/auth/claims"
 	"github.com/qor/responder"
 	"github.com/qor/session"
+	"github.com/moisespsena/template/html/template"
 )
 
 func respondAfterLogged(claims *claims.Claims, context *Context) {
@@ -31,22 +31,20 @@ func respondAfterLogged(claims *claims.Claims, context *Context) {
 // DefaultLoginHandler default login behaviour
 var DefaultLoginHandler = func(context *Context, authorize func(*Context) (*claims.Claims, error)) {
 	var (
-		req         = context.Request
-		w           = context.Writer
 		claims, err = authorize(context)
 	)
 
 	if err == nil && claims != nil {
-		context.SessionStorer.Flash(w, req, session.Message{Message: "logged"})
+		context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: "logged"})
 		respondAfterLogged(claims, context)
 		return
 	}
 
-	context.SessionStorer.Flash(w, req, session.Message{Message: template.HTML(err.Error()), Type: "error"})
+	context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: template.HTML(err.Error()), Type: "error"})
 
 	// error handling
 	responder.With("html", func() {
-		context.Auth.Config.Render.Execute("auth/login", context, req, w)
+		context.Auth.Config.Render.Execute("auth/login", context, context.Context)
 	}).With([]string{"json"}, func() {
 		// TODO write json error
 	}).Respond(context.Request)
@@ -55,8 +53,6 @@ var DefaultLoginHandler = func(context *Context, authorize func(*Context) (*clai
 // DefaultRegisterHandler default register behaviour
 var DefaultRegisterHandler = func(context *Context, register func(*Context) (*claims.Claims, error)) {
 	var (
-		req         = context.Request
-		w           = context.Writer
 		claims, err = register(context)
 	)
 
@@ -65,11 +61,12 @@ var DefaultRegisterHandler = func(context *Context, register func(*Context) (*cl
 		return
 	}
 
-	context.SessionStorer.Flash(w, req, session.Message{Message: template.HTML(err.Error()), Type: "error"})
+	context.SessionStorer.Flash(context.SessionManager(),
+		session.Message{Message: template.HTML(err.Error()), Type: "error"})
 
 	// error handling
 	responder.With("html", func() {
-		context.Auth.Config.Render.Execute("auth/register", context, req, w)
+		context.Auth.Config.Render.Execute("auth/register", context, context.Context)
 	}).With([]string{"json"}, func() {
 		// TODO write json error
 	}).Respond(context.Request)
@@ -78,8 +75,18 @@ var DefaultRegisterHandler = func(context *Context, register func(*Context) (*cl
 // DefaultLogoutHandler default logout behaviour
 var DefaultLogoutHandler = func(context *Context) {
 	// Clear auth session
-	context.SessionStorer.Delete(context.Writer, context.Request)
+	context.SessionStorer.Delete(context.SessionManager())
 	context.Auth.Redirector.Redirect(context.Writer, context.Request, "logout")
+}
+
+// DefaultProfileHandler default profile behaviour
+var DefaultProfileHandler = func(context *Context) {
+	// error handling
+	responder.With("html", func() {
+		context.Auth.Config.Render.Execute("auth/profile", context, context.Context)
+	}).With([]string{"json"}, func() {
+		// TODO write json error
+	}).Respond(context.Request)
 }
 
 var cacheSince = time.Now().Format(http.TimeFormat)
@@ -94,7 +101,7 @@ var DefaultAssetHandler = func(context *Context) {
 	}
 	context.Writer.Header().Set("Last-Modified", cacheSince)
 
-	if content, err := context.Config.Render.Asset(path.Join("/auth", asset)); err == nil {
+	if content, err := context.Auth.Config.Render.Asset(path.Join("/auth", asset)); err == nil {
 		etag := fmt.Sprintf("%x", md5.Sum(content))
 		if context.Request.Header.Get("If-None-Match") == etag {
 			context.Writer.WriteHeader(http.StatusNotModified)

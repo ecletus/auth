@@ -3,7 +3,6 @@ package twitter
 import (
 	"encoding/json"
 	"errors"
-	"html/template"
 	"io/ioutil"
 	"net/http"
 	"reflect"
@@ -14,6 +13,7 @@ import (
 	"github.com/qor/auth/claims"
 	"github.com/qor/qor/utils"
 	"github.com/qor/session"
+	"github.com/moisespsena/template/html/template"
 )
 
 var UserInfoURL = "https://api.twitter.com/1.1/account/verify_credentials.json?include_email=true"
@@ -26,6 +26,7 @@ type Provider struct {
 
 // Config twitter Config
 type Config struct {
+	Name             string
 	ClientID         string
 	ClientSecret     string
 	AuthorizeURL     string
@@ -58,10 +59,10 @@ func New(config *Config) *Provider {
 				consumer     = provider.NewConsumer(context)
 				oauthToken   = context.Request.URL.Query().Get("oauth_verifier")
 				authIdentity = reflect.New(utils.ModelType(context.Auth.Config.AuthIdentityModel)).Interface()
-				tx           = context.Auth.GetDB(context.Request)
+				db           = context.DB
 			)
 
-			Claims, err := provider.Auth.Get(context.Request)
+			Claims, err := provider.Auth.Get(context.SessionManager())
 			if err != nil {
 				return nil, err
 			}
@@ -104,7 +105,7 @@ func New(config *Config) *Provider {
 			authInfo.Provider = provider.GetName()
 			authInfo.UID = schema.UID
 
-			if !tx.Model(authIdentity).Where(authInfo).Scan(&authInfo).RecordNotFound() {
+			if !db.Model(authIdentity).Where(authInfo).Scan(&authInfo).RecordNotFound() {
 				return authInfo.ToClaims(), nil
 			}
 
@@ -116,7 +117,7 @@ func New(config *Config) *Provider {
 				return nil, err
 			}
 
-			if err = tx.Where(authInfo).FirstOrCreate(authIdentity).Error; err == nil {
+			if err = db.Where(authInfo).FirstOrCreate(authIdentity).Error; err == nil {
 				return authInfo.ToClaims(), nil
 			}
 
@@ -127,9 +128,17 @@ func New(config *Config) *Provider {
 	return provider
 }
 
-// GetName return provider name
-func (Provider) GetName() string {
+// GetDefaultName return provider default name
+func (Config) GetDefaultName() string {
 	return "twitter"
+}
+
+// GetName return provider name
+func (p Provider) GetName() string {
+	if p.Name != "" {
+		return p.Name
+	}
+	return p.GetDefaultName()
 }
 
 // ConfigAuth config auth
@@ -163,19 +172,19 @@ func (provider Provider) Login(context *auth.Context) {
 	if err == nil {
 		// save requestToken into session
 		Claims := &claims.Claims{}
-		if c, err := provider.Auth.Get(context.Request); err == nil {
+		if c, err := provider.Auth.Get(context.SessionManager()); err == nil {
 			Claims = c
 		}
 		tokenStr, _ := json.Marshal(requestToken)
 		Claims.Issuer = string(tokenStr)
-		provider.Auth.Update(context.Writer, context.Request, Claims)
+		provider.Auth.Update(context.SessionManager(), Claims)
 
 		http.Redirect(context.Writer, context.Request, u, http.StatusFound)
 		return
 	}
 
-	context.SessionStorer.Flash(context.Writer, context.Request, session.Message{Message: template.HTML(err.Error()), Type: "error"})
-	context.Auth.Config.Render.Execute("auth/login", context, context.Request, context.Writer)
+	context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: template.HTML(err.Error()), Type: "error"})
+	context.Auth.Config.Render.Execute("auth/login", context, context.Context)
 }
 
 // Logout implemented logout with twitter provider

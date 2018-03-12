@@ -24,6 +24,7 @@ type GoogleProvider struct {
 
 // Config google Config
 type Config struct {
+	Name             string
 	ClientID         string
 	ClientSecret     string
 	AuthorizeURL     string
@@ -66,7 +67,7 @@ func New(config *Config) *GoogleProvider {
 				req          = context.Request
 				schema       auth.Schema
 				authInfo     auth_identity.Basic
-				tx           = context.Auth.GetDB(req)
+				db           = context.DB
 				authIdentity = reflect.New(utils.ModelType(context.Auth.Config.AuthIdentityModel)).Interface()
 			)
 
@@ -109,7 +110,7 @@ func New(config *Config) *GoogleProvider {
 				authInfo.Provider = provider.GetName()
 				authInfo.UID = schema.UID
 
-				if !tx.Model(authIdentity).Where(authInfo).Scan(&authInfo).RecordNotFound() {
+				if !db.Model(authIdentity).Where(authInfo).Scan(&authInfo).RecordNotFound() {
 					return authInfo.ToClaims(), nil
 				}
 
@@ -121,7 +122,7 @@ func New(config *Config) *GoogleProvider {
 					return nil, err
 				}
 
-				if err = tx.Where(authInfo).FirstOrCreate(authIdentity).Error; err == nil {
+				if err = db.Where(authInfo).FirstOrCreate(authIdentity).Error; err == nil {
 					return authInfo.ToClaims(), nil
 				}
 			}
@@ -132,9 +133,17 @@ func New(config *Config) *GoogleProvider {
 	return provider
 }
 
-// GetName return provider name
-func (GoogleProvider) GetName() string {
+// GetDefaultName return provider name
+func (Config) GetDefaultName() string {
 	return "google"
+}
+
+// GetName return provider name
+func (p GoogleProvider) GetName() string {
+	if p.Name != "" {
+		return p.Name
+	}
+	return p.GetDefaultName()
 }
 
 // ConfigAuth config auth

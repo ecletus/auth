@@ -7,14 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"html/template"
-
 	"github.com/qor/auth"
 	"github.com/qor/auth/auth_identity"
 	"github.com/qor/auth/claims"
 	"github.com/qor/mailer"
 	"github.com/qor/qor/utils"
 	"github.com/qor/session"
+	"github.com/moisespsena/template/html/template"
 )
 
 var (
@@ -39,8 +38,7 @@ var DefaultResetPasswordMailer = func(email string, context *auth.Context, claim
 		}, mailer.Template{
 			Name:    "auth/reset_password",
 			Data:    context,
-			Request: context.Request,
-			Writer:  context.Writer,
+			Context: context.Context,
 		}.Funcs(template.FuncMap{
 			"current_user": func() interface{} {
 				return currentUser
@@ -76,7 +74,7 @@ var DefaultRecoverPasswordHandler = func(context *auth.Context) error {
 	err = provider.ResetPasswordMailer(email, context, authInfo.ToClaims(), currentUser)
 
 	if err == nil {
-		context.SessionStorer.Flash(context.Writer, context.Request, session.Message{Message: SendChangePasswordMailFlashMessage, Type: "success"})
+		context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: SendChangePasswordMailFlashMessage, Type: "success"})
 		context.Auth.Redirector.Redirect(context.Writer, context.Request, "send_recover_password_mail")
 	}
 	return err
@@ -90,7 +88,7 @@ var DefaultResetPasswordHandler = func(context *auth.Context) error {
 		authInfo    auth_identity.Basic
 		token       = context.Request.Form.Get("reset_password_token")
 		provider, _ = context.Provider.(*Provider)
-		tx          = context.Auth.GetDB(context.Request)
+		db          = context.DB
 	)
 
 	claims, err := context.SessionStorer.ValidateClaims(token)
@@ -101,7 +99,7 @@ var DefaultResetPasswordHandler = func(context *auth.Context) error {
 			authInfo.UID = claims.Id
 			authIdentity := reflect.New(utils.ModelType(context.Auth.Config.AuthIdentityModel)).Interface()
 
-			if tx.Where(authInfo).First(authIdentity).RecordNotFound() {
+			if db.Where(authInfo).First(authIdentity).RecordNotFound() {
 				return auth.ErrInvalidAccount
 			}
 
@@ -111,13 +109,13 @@ var DefaultResetPasswordHandler = func(context *auth.Context) error {
 					now := time.Now()
 					authInfo.ConfirmedAt = &now
 				}
-				err = tx.Model(authIdentity).Update(authInfo).Error
+				err = db.Model(authIdentity).Update(authInfo).Error
 			}
 		}
 	}
 
 	if err == nil {
-		context.SessionStorer.Flash(context.Writer, context.Request, session.Message{Message: ChangedPasswordFlashMessage, Type: "success"})
+		context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: ChangedPasswordFlashMessage, Type: "success"})
 		context.Auth.Redirector.Redirect(context.Writer, context.Request, "reset_password")
 	}
 	return err

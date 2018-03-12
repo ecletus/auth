@@ -3,7 +3,6 @@ package auth
 import (
 	"errors"
 	"fmt"
-	"net/http"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/qor/auth/claims"
@@ -13,16 +12,16 @@ import (
 // SessionStorerInterface session storer interface for Auth
 type SessionStorerInterface interface {
 	// Get get claims from request
-	Get(req *http.Request) (*claims.Claims, error)
+	Get(manager session.RequestSessionManager) (*claims.Claims, error)
 	// Update update claims with session manager
-	Update(w http.ResponseWriter, req *http.Request, claims *claims.Claims) error
+	Update(manager session.RequestSessionManager, claims *claims.Claims) error
 	// Delete delete session
-	Delete(w http.ResponseWriter, req *http.Request) error
+	Delete(manager session.RequestSessionManager) error
 
 	// Flash add flash message to session data
-	Flash(w http.ResponseWriter, req *http.Request, message session.Message) error
+	Flash(manager session.RequestSessionManager, message session.Message) error
 	// Flashes returns a slice of flash messages from session data
-	Flashes(w http.ResponseWriter, req *http.Request) []session.Message
+	Flashes(manager session.RequestSessionManager) []session.Message
 
 	// SignedToken generate signed token with Claims
 	SignedToken(claims *claims.Claims) string
@@ -35,41 +34,40 @@ type SessionStorer struct {
 	SessionName    string
 	SigningMethod  jwt.SigningMethod
 	SignedString   string
-	SessionManager session.ManagerInterface
 }
 
 // Get get claims from request
-func (sessionStorer *SessionStorer) Get(req *http.Request) (*claims.Claims, error) {
-	tokenString := req.Header.Get("Authorization")
+func (sessionStorer *SessionStorer) Get(manager session.RequestSessionManager) (*claims.Claims, error) {
+	tokenString := manager.Request().Header.Get("Authorization")
 
 	// Get Token from Cookie
 	if tokenString == "" {
-		tokenString = sessionStorer.SessionManager.Get(req, sessionStorer.SessionName)
+		tokenString = manager.Get(sessionStorer.SessionName)
 	}
 
 	return sessionStorer.ValidateClaims(tokenString)
 }
 
 // Update update claims with session manager
-func (sessionStorer *SessionStorer) Update(w http.ResponseWriter, req *http.Request, claims *claims.Claims) error {
+func (sessionStorer *SessionStorer) Update(manager session.RequestSessionManager, claims *claims.Claims) error {
 	token := sessionStorer.SignedToken(claims)
-	return sessionStorer.SessionManager.Add(w, req, sessionStorer.SessionName, token)
+	return manager.Add(sessionStorer.SessionName, token)
 }
 
 // Delete delete claims from session manager
-func (sessionStorer *SessionStorer) Delete(w http.ResponseWriter, req *http.Request) error {
-	sessionStorer.SessionManager.Pop(w, req, sessionStorer.SessionName)
+func (sessionStorer *SessionStorer) Delete(manager session.RequestSessionManager) error {
+	manager.Pop(sessionStorer.SessionName)
 	return nil
 }
 
 // Flash add flash message to session data
-func (sessionStorer *SessionStorer) Flash(w http.ResponseWriter, req *http.Request, message session.Message) error {
-	return sessionStorer.SessionManager.Flash(w, req, message)
+func (sessionStorer *SessionStorer) Flash(manager session.RequestSessionManager, message session.Message) error {
+	return manager.Flash(message)
 }
 
 // Flashes returns a slice of flash messages from session data
-func (sessionStorer *SessionStorer) Flashes(w http.ResponseWriter, req *http.Request) []session.Message {
-	return sessionStorer.SessionManager.Flashes(w, req)
+func (sessionStorer *SessionStorer) Flashes(manager session.RequestSessionManager) []session.Message {
+	return manager.Flashes()
 }
 
 // SignedToken generate signed token with Claims

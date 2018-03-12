@@ -22,7 +22,7 @@ type UserStorer struct {
 
 // Get defined how to get user with user id
 func (UserStorer) Get(Claims *claims.Claims, context *Context) (user interface{}, err error) {
-	var tx = context.Auth.GetDB(context.Request)
+	var tx = context.DB
 
 	if context.Auth.Config.UserModel != nil {
 		if Claims.UserID != "" {
@@ -63,13 +63,13 @@ func (UserStorer) Get(Claims *claims.Claims, context *Context) (user interface{}
 
 // Save defined how to save user
 func (UserStorer) Save(schema *Schema, context *Context) (user interface{}, userID string, err error) {
-	var tx = context.Auth.GetDB(context.Request)
+	var db = context.DB
 
 	if context.Auth.Config.UserModel != nil {
 		currentUser := reflect.New(utils.ModelType(context.Auth.Config.UserModel)).Interface()
 		copier.Copy(currentUser, schema)
-		err = tx.Create(currentUser).Error
-		return currentUser, fmt.Sprint(tx.NewScope(currentUser).PrimaryKeyValue()), err
+		err = db.Create(currentUser).Error
+		return currentUser, fmt.Sprint(db.NewScope(currentUser).PrimaryKeyValue()), err
 	}
 	return nil, "", nil
 }

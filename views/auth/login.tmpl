@@ -1,5 +1,5 @@
 <div style="margin:auto; text-align: center;">
-  <h2>Log in</h2>
+  <h2>{{t "auth.sign_in" "Sign In"}}</h2>
 
   {{$flashes := .Flashes}}
   {{if $flashes}}
@@ -13,13 +13,15 @@
   <div>
     <div>
       {{range $provider := .GetProviders}}
-        <div>Login with {{$provider.GetName}}</div>
+        <div>{{t "auth.form.login_with" "Login With 2"}} {{$provider.GetName}}</div>
         {{render (printf "auth/login/providers/%v" $provider.GetName)}}
       {{end}}
     </div>
   </div>
 
+  {{if .Registrable}}
   <div>
-    <a href="{{.AuthURL "register"}}">Sign Up</a>
+    <a href="{{.AuthURL "register"}}">>{{t "auth.sign_up" "Sign Up"}}</a>
   </div>
+  {{end}}
 </div>
