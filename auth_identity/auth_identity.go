@@ -3,13 +3,13 @@ package auth_identity
 import (
 	"time"
 
-	"github.com/jinzhu/gorm"
+	"github.com/moisespsena-go/aorm"
 	"github.com/aghape/auth/claims"
 )
 
 // AuthIdentity auth identity session model
 type AuthIdentity struct {
-	gorm.Model
+	aorm.Model
 	Basic
 	SignLogs
 }

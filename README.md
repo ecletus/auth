@@ -30,7 +30,7 @@ import (
 
 var (
   // Initialize gorm DB
-  gormDB, _ = gorm.Open("sqlite3", "sample.db")
+  gormDB, _ = aorm.Open("sqlite3", "sample.db")
 
   // Initialize Auth with configuration
   Auth = auth.New(&auth.Config{
