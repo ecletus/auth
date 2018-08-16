@@ -12,6 +12,7 @@ type Provider interface {
 	Register(*Context)
 	Callback(*Context)
 	ServeHTTP(*Context)
+	I18n(key ...string) string
 }
 
 // RegisterProvider register auth provider
@@ -27,7 +28,7 @@ func (auth *Auth) RegisterProvider(provider Provider) {
 }
 
 // GetProvider get provider with name
-func (auth *Auth) GetProvider(name string) (Provider) {
+func (auth *Auth) GetProvider(name string) Provider {
 	return auth.providers[name]
 }
 

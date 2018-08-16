@@ -1,6 +1,6 @@
 package phone
 
-import "github.com/qor/auth"
+import "github.com/aghape/auth"
 
 func New() *PhoneProvider {
 	return &PhoneProvider{}
@@ -37,4 +37,11 @@ func (PhoneProvider) Callback(*auth.Context) {
 
 // ServeHTTP implement ServeHTTP with phone provider
 func (PhoneProvider) ServeHTTP(*auth.Context) {
+}
+
+// I18n returh i18n key prefix
+func (p PhoneProvider) I18n(key ...string) string {
+	if len(key) > 0 && key[0] != "" {
+		return I18N_GROUP + "." + key[0]
+	}
 }

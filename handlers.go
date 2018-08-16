@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/qor/auth/claims"
-	"github.com/qor/responder"
-	"github.com/qor/session"
+	"github.com/aghape/auth/claims"
+	"github.com/aghape/responder"
+	"github.com/aghape/session"
 	"github.com/moisespsena/template/html/template"
 )
 
@@ -93,7 +93,7 @@ var cacheSince = time.Now().Format(http.TimeFormat)
 
 // DefaultAssetHandler render auth asset file
 var DefaultAssetHandler = func(context *Context) {
-	asset := strings.TrimPrefix(context.Request.URL.Path, context.Auth.URLPrefix)
+	pth := strings.TrimPrefix(context.Request.URL.Path, context.Auth.URLPrefix)
 
 	if context.Request.Header.Get("If-Modified-Since") == cacheSince {
 		context.Writer.WriteHeader(http.StatusNotModified)
@@ -101,20 +101,20 @@ var DefaultAssetHandler = func(context *Context) {
 	}
 	context.Writer.Header().Set("Last-Modified", cacheSince)
 
-	if content, err := context.Auth.Config.Render.Asset(path.Join("/auth", asset)); err == nil {
-		etag := fmt.Sprintf("%x", md5.Sum(content))
+	if asset, err := context.Auth.Config.Render.Asset(path.Join("/auth", pth)); err == nil {
+		etag := fmt.Sprintf("%x", md5.Sum(asset.GetData()))
 		if context.Request.Header.Get("If-None-Match") == etag {
 			context.Writer.WriteHeader(http.StatusNotModified)
 			return
 		}
 
-		if ctype := mime.TypeByExtension(filepath.Ext(asset)); ctype != "" {
+		if ctype := mime.TypeByExtension(filepath.Ext(pth)); ctype != "" {
 			context.Writer.Header().Set("Content-Type", ctype)
 		}
 
 		context.Writer.Header().Set("Cache-control", "private, must-revalidate, max-age=300")
 		context.Writer.Header().Set("ETag", etag)
-		context.Writer.Write(content)
+		context.Writer.Write(asset.GetData())
 	} else {
 		http.NotFound(context.Writer, context.Request)
 	}

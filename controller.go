@@ -5,8 +5,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/qor/auth/claims"
-	"github.com/moisespsena/template/html/template"
+	"github.com/aghape/auth/claims"
 )
 
 // NewServeMux generate http.Handler for auth
@@ -22,17 +21,12 @@ type serveMux struct {
 func (serveMux *serveMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var (
 		claims  *claims.Claims
-		reqPath = strings.TrimPrefix(req.URL.Path, serveMux.URLPrefix + "/")
+		reqPath = strings.TrimPrefix(req.URL.Path, serveMux.URLPrefix+"/")
 		paths   = strings.Split(reqPath, "/")
+		render  = serveMux.Auth.Render.Template()
 	)
 
 	req, context := NewContextFromRequestPair(w, req, serveMux.Auth, claims)
-
-	render := serveMux.Auth.Render.Template().Funcs(template.FuncMap{
-		"prefix": func() string {
-			return serveMux.Auth.URLPrefix
-		},
-	})
 
 	if len(paths) >= 2 {
 		// render assets
@@ -64,7 +58,7 @@ func (serveMux *serveMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			case "logout":
 				provider.Logout(context)
 			case "register":
-				if serveMux.Registrable(context) {
+				if serveMux.Registrable(context.Context) {
 					provider.Register(context)
 				} else {
 					w.WriteHeader(http.StatusForbidden)
@@ -81,9 +75,11 @@ func (serveMux *serveMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		switch paths[0] {
 		case "login":
 			// render login page
+			context.Data().Set(AUTH_URL_KEY+".page", "login")
 			render.Execute("auth/login", context, context.Context)
 		case "profile":
 			if context.GetCurrentUser(req) != nil {
+				context.Data().Set(AUTH_URL_KEY+".page", "profile")
 				serveMux.Auth.ProfileHandler(context)
 			} else {
 				redirectTo := context.AuthURL("login") + "?return_to="
@@ -91,12 +87,14 @@ func (serveMux *serveMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			}
 		case "register":
 			// render register page
-			if serveMux.Registrable(context) {
+			if serveMux.Registrable(context.Context) {
+				context.Data().Set(AUTH_URL_KEY+".page", "register")
 				render.Execute("auth/register", context, context.Context)
 			} else {
 				w.WriteHeader(http.StatusForbidden)
 			}
 		case "logout":
+			context.Data().Set(AUTH_URL_KEY+".page", "logout")
 			// destroy login context
 			serveMux.Auth.LogoutHandler(context)
 		default:

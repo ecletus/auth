@@ -1,0 +1,39 @@
+<link rel="stylesheet" media="all" href="{{static_url "/auth/styles/qor_auth.css"}}" />
+<div class="container qor-auth">
+  <div class="qor-auth-box">
+  <h1>{{t (.Auth.I18n "form.reset_password")}}</h1>
+
+  {{$flashes := .Flashes}}
+  {{if $flashes}}
+    <ul>
+      {{range $flash := $flashes}}
+        <li>{{$flash.Message}}</li>
+      {{end}}
+    </ul>
+  {{end}}
+
+  <div>
+    <form action="{{.AuthURL "password/update"}}" method="POST">
+        <ul class="auth-form">
+        <input type="hidden" name="reset_password_token" value="{{reset_password_token}}">
+          <li>
+            <label for="current_password">{{t (.Auth.I18n "form.current_password") }}</label>
+            <input type="password" class="form-control" id="current_password" name="current_password" placeholder="{{t (.Auth.I18n "form.current_password_placeholder") }}">
+          </li>
+          <li>
+            <label for="new_password">{{t (.Auth.I18n "form.new_password") }}</label>
+            <input type="password" class="form-control" id="new_password" name="new_password" placeholder="{{t (.Auth.I18n "form.new_password_placeholder") }}">
+          </li>
+          <li>
+            <label for="password_confirm">{{t (.Auth.I18n "form.password_confirm") }}</label>
+            <input type="password" class="form-control" id="password_confirm" name="password_confirm" placeholder="{{t (.Auth.I18n "form.password_confirm_placeholder") }}">
+          </li>
+          <li>
+            <button type="submit" class="button button__primary">{{t (.Auth.I18n "form.reset_password") }}</button>
+          </li>
+        </ul>
+      </form>
+  </div>
+</div>
+</div>
+</div>

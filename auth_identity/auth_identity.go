@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
-	"github.com/qor/auth/claims"
+	"github.com/aghape/auth/claims"
 )
 
 // AuthIdentity auth identity session model
@@ -30,4 +30,8 @@ func (basic Basic) ToClaims() *claims.Claims {
 	claims.Id = basic.UID
 	claims.UserID = basic.UserID
 	return &claims
+}
+
+type UserWithPassword interface {
+	AuthIdentityGetPassword() string
 }

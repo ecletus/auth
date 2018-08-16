@@ -3,12 +3,11 @@ package authority
 import (
 	"net/http"
 
-	"github.com/qor/qor"
-	"github.com/qor/auth"
-	"github.com/qor/middlewares"
-	"github.com/qor/roles"
-	"github.com/qor/session"
-	_ "github.com/qor/session/manager"
+	"github.com/aghape/aghape"
+	"github.com/aghape/auth"
+	"github.com/aghape/roles"
+	"github.com/aghape/session"
+	_ "github.com/aghape/session/manager"
 	"github.com/moisespsena/template/html/template"
 )
 
@@ -53,16 +52,7 @@ func New(config *Config) *Authority {
 		config.AccessDeniedHandler = NewAccessDeniedHandler(config.Auth, "/")
 	}
 
-	authority := &Authority{Config: config}
-
-	middlewares.Use(middlewares.Middleware{
-		Name:        "authority",
-		InsertAfter: []string{"session"},
-		Handler: func(handler http.Handler) http.Handler {
-			return authority.Middleware(handler)
-		},
-	})
-	return authority
+	return &Authority{Config: config}
 }
 
 // Authorize authorize specfied roles or authenticated user to access wrapped handler

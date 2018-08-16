@@ -3,13 +3,15 @@ package auth
 import (
 	"net/http"
 
-	"github.com/qor/redirect_back"
+	"github.com/aghape/redirect_back"
+	"github.com/moisespsena/go-route"
 )
 
 // RedirectorInterface redirector interface
 type RedirectorInterface interface {
 	// Redirect redirect after action
 	Redirect(w http.ResponseWriter, req *http.Request, action string)
+	Middleware() *route.Middleware
 }
 
 // Redirector default redirector

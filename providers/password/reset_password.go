@@ -7,13 +7,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/qor/auth"
-	"github.com/qor/auth/auth_identity"
-	"github.com/qor/auth/claims"
-	"github.com/qor/mailer"
-	"github.com/qor/qor/utils"
-	"github.com/qor/session"
+	"errors"
+	"fmt"
+
+	"github.com/moisespsena/go-zxcvbn-fb"
 	"github.com/moisespsena/template/html/template"
+	"github.com/aghape/auth"
+	"github.com/aghape/auth/auth_identity"
+	"github.com/aghape/auth/claims"
+	"github.com/aghape/mailer"
+	"github.com/aghape/aghape/utils"
+	"github.com/aghape/session"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -50,6 +55,19 @@ var DefaultResetPasswordMailer = func(email string, context *auth.Context, claim
 			},
 		}),
 	)
+}
+
+func NewPasswordToken(context *auth.Context, email string) string {
+	var (
+		authInfo    auth_identity.Basic
+		provider, _ = context.Provider.(*Provider)
+	)
+
+	authInfo.Provider = provider.GetName()
+	authInfo.UID = strings.TrimSpace(email)
+	claims := authInfo.ToClaims()
+	token := context.SessionStorer.SignedToken(claims)
+	return token
 }
 
 // DefaultRecoverPasswordHandler default reset password handler
@@ -117,6 +135,77 @@ var DefaultResetPasswordHandler = func(context *auth.Context) error {
 	if err == nil {
 		context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: ChangedPasswordFlashMessage, Type: "success"})
 		context.Auth.Redirector.Redirect(context.Writer, context.Request, "reset_password")
+	}
+	return err
+}
+
+// DefaultResetPasswordHandler default reset password handler
+var DefaultUpdatePasswordHandler = func(context *auth.Context) error {
+	context.Request.ParseForm()
+
+	var (
+		authInfo    auth_identity.Basic
+		token       = context.Request.Form.Get("reset_password_token")
+		provider, _ = context.Provider.(*Provider)
+		db          = context.DB
+	)
+
+	claims, err := context.SessionStorer.ValidateClaims(token)
+
+	if err == nil {
+		if err = claims.Valid(); err == nil {
+			authInfo.Provider = provider.GetName()
+			authInfo.UID = claims.Id
+			authIdentity := reflect.New(utils.ModelType(context.Auth.Config.AuthIdentityModel)).Interface()
+
+			if db.Model(context.Auth.AuthIdentityModel).Where(authInfo).Scan(&authInfo).RecordNotFound() {
+				return auth.ErrInvalidAccount
+			}
+
+			currentPassword := context.Request.Form.Get("current_password")
+			if currentPassword == "" {
+				return errors.New(context.Ts(context.Auth.I18n("form.current_password_placeholder")))
+			}
+			if err := provider.Encryptor.Compare(authInfo.EncryptedPassword, currentPassword); err != nil {
+				if err == bcrypt.ErrMismatchedHashAndPassword {
+					return fmt.Errorf(context.Ts(context.Auth.I18n("passwords.current_password_not_match")))
+				} else {
+					return err
+				}
+			}
+
+			newPassword := context.Request.Form.Get("new_password")
+			passwordConfirm := context.Request.Form.Get("password_confirm")
+			if newPassword != passwordConfirm {
+				return errors.New(context.Ts(context.Auth.I18n("passwords.passwords_not_match")))
+			}
+
+			result, err := zxcvbn_fb.Zxcvbn(newPassword)
+			if err != nil {
+				return fmt.Errorf("Validate Password Failed: %v", err)
+			}
+
+			if result.Score <= 2 {
+				msg := result.Feedback.Warning
+				if msg != "" && len(result.Feedback.Suggestions) > 0 {
+					msg += ": " + strings.Join(result.Feedback.Suggestions, ". ")
+				}
+				return errors.New(msg)
+			}
+
+			if authInfo.EncryptedPassword, err = provider.Encryptor.Digest(newPassword); err == nil {
+				// Confirm account after reset password, as user already click a link from email
+				if provider.Config.Confirmable && authInfo.ConfirmedAt == nil {
+					now := time.Now()
+					authInfo.ConfirmedAt = &now
+				}
+				err = db.Model(authIdentity).Update(authInfo).Error
+			}
+		}
+	}
+
+	if err == nil {
+		context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: ChangedPasswordFlashMessage, Type: "success"})
 	}
 	return err
 }

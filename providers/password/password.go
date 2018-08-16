@@ -4,13 +4,14 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/qor/auth"
-	"github.com/qor/auth/auth_identity"
-	"github.com/qor/auth/claims"
-	"github.com/qor/auth/providers/password/encryptor"
-	"github.com/qor/auth/providers/password/encryptor/bcrypt_encryptor"
-	"github.com/qor/session"
 	"github.com/moisespsena/template/html/template"
+	"github.com/aghape/auth"
+	"github.com/aghape/auth/auth_identity"
+	"github.com/aghape/auth/claims"
+	"github.com/aghape/auth/providers/password/encryptor"
+	"github.com/aghape/auth/providers/password/encryptor/bcrypt_encryptor"
+	"github.com/aghape/common"
+	"github.com/aghape/session"
 )
 
 // Config password config
@@ -81,13 +82,16 @@ func (Provider) GetName() string {
 	return "password"
 }
 
+// I18n returh i18n key prefix
+func (p Provider) I18n(key ...string) string {
+	if len(key) > 0 && key[0] != "" {
+		return I18N_GROUP + "." + key[0]
+	}
+	return I18N_GROUP
+}
+
 // ConfigAuth config auth
 func (provider Provider) ConfigAuth(auth *auth.Auth) {
-	auth.Render.RegisterViewPath("github.com/qor/auth/providers/password/views")
-
-	if auth.Mailer != nil {
-		auth.Mailer.RegisterViewPath("github.com/qor/auth/providers/password/views/mailers")
-	}
 }
 
 // Login implemented login with password provider
@@ -113,7 +117,7 @@ func (provider Provider) Callback(context *auth.Context) {
 func (provider Provider) ServeHTTP(context *auth.Context) {
 	var (
 		req     = context.Request
-		reqPath = strings.TrimPrefix(req.URL.Path, context.Auth.URLPrefix)
+		reqPath = strings.TrimPrefix(req.URL.Path, context.Auth.URLPrefix+"/")
 		paths   = strings.Split(reqPath, "/")
 	)
 
@@ -188,12 +192,24 @@ func (provider Provider) ServeHTTP(context *auth.Context) {
 			context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: template.HTML(ErrInvalidResetPasswordToken.Error()), Type: "error"})
 			http.Redirect(context.Writer, context.Request, context.Auth.AuthURL("password/new"), http.StatusSeeOther)
 		case "update":
-			// update password
-			err := provider.ResetPasswordHandler(context)
-			if err != nil {
+			if req.Method == "POST" {
+				// update password
+				err := DefaultUpdatePasswordHandler(context)
+				if err == nil {
+					redirectTo := context.GenURL(context.Auth.AuthURL("profile"))
+					http.Redirect(context.Writer, context.Request, redirectTo, http.StatusSeeOther)
+					return
+				}
 				context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: template.HTML(err.Error()), Type: "error"})
-				http.Redirect(context.Writer, context.Request, context.Auth.AuthURL("password/new"), http.StatusSeeOther)
+				redirectTo := context.GenURL(context.Auth.AuthURL("password/update"))
+				http.Redirect(context.Writer, context.Request, redirectTo, http.StatusSeeOther)
 				return
+			} else {
+				user := context.Auth.GetCurrentUser(req).(common.User)
+				token := NewPasswordToken(context, user.GetEmail())
+				context.Auth.Config.Render.Template().Funcs(template.FuncMap{
+					"reset_password_token": func() string { return token },
+				}).Execute("auth/password/update", context, context.Context)
 			}
 		}
 	}

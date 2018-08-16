@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"reflect"
 
-	"github.com/mrjones/oauth"
-	"github.com/qor/auth"
-	"github.com/qor/auth/auth_identity"
-	"github.com/qor/auth/claims"
-	"github.com/qor/qor/utils"
-	"github.com/qor/session"
 	"github.com/moisespsena/template/html/template"
+	"github.com/mrjones/oauth"
+	"github.com/aghape/auth"
+	"github.com/aghape/auth/auth_identity"
+	"github.com/aghape/auth/claims"
+	"github.com/aghape/aghape/utils"
+	"github.com/aghape/session"
 )
 
 var UserInfoURL = "https://api.twitter.com/1.1/account/verify_credentials.json?include_email=true"
@@ -141,10 +141,17 @@ func (p Provider) GetName() string {
 	return p.GetDefaultName()
 }
 
+// I18n returh i18n key prefix
+func (p Provider) I18n(key ...string) string {
+	if len(key) > 0 && key[0] != "" {
+		return I18N_GROUP + "." + key[0]
+	}
+	return I18N_GROUP
+}
+
 // ConfigAuth config auth
 func (provider *Provider) ConfigAuth(auth *auth.Auth) {
 	provider.Auth = auth
-	provider.Auth.Render.RegisterViewPath("github.com/qor/auth/providers/twitter/views")
 }
 
 // NewConsumer new twitter consumer

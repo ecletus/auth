@@ -3,9 +3,9 @@ package auth
 import (
 	"net/http"
 
-	"github.com/qor/auth/claims"
-	"github.com/qor/session"
-	"github.com/qor/qor"
+	"github.com/aghape/auth/claims"
+	"github.com/aghape/session"
+	"github.com/aghape/aghape"
 )
 
 // Context context
@@ -27,7 +27,7 @@ func (context Context) FormValue(name string) string {
 }
 
 func (context *Context) Registrable() bool {
-	return context.Auth.Registrable(context)
+	return context.Auth.Registrable(context.Context)
 }
 
 func (context *Context) AuthURL(path string) string {

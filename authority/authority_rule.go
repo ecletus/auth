@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/qor/qor"
-	"github.com/qor/roles"
+	"github.com/aghape/aghape"
+	"github.com/aghape/roles"
 )
 
 // Rule authority rule's definition

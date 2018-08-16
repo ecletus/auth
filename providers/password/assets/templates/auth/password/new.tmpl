@@ -1,5 +1,5 @@
 <div style="margin:auto; text-align: center;">
-  <h2>Forgot your password?</h2>
+  <h2>{{t (.I18n "links.forgot_password") "forgot your password?"}}</h2>
 
   {{$flashes := .Flashes}}
   {{if $flashes}}
@@ -12,12 +12,12 @@
 
   <div>
     <form action="{{.AuthURL "password/recover"}}" method="POST">
-      Email:  <input name="email">
+      {{t ".form.email"}}:  <input name="email">
       <input type="submit">
     </form>
   </div>
 
   <div>
-    <a href="{{.AuthURL "login"}}">Sign in</a>
+    <a href="{{.AuthURL "login"}}">{{t (printf "%v." .AuthI18nGroup)}}</a>
   </div>
 </div>

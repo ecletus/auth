@@ -1,0 +1,29 @@
+<div style="margin:auto; text-align: center;">
+  <h2>{{t (.I18n "form.sign_in") "Sign In"}}</h2>
+
+  {{$flashes := .Flashes}}
+  {{if $flashes}}
+    <ul>
+      {{range $flash := $flashes}}
+        <li>{{$flash.Message}}</li>
+      {{end}}
+    </ul>
+  {{end}}
+
+  <div>
+    <div>
+      {{set "Auth" .Auth}}
+      {{set "Context" .}}
+      {{range $provider := .GetProviders}}
+        <div>{{t ((get "Auth").I18n "form.login_with") "Login With"}} {{t ($provider.I18n "name") $provider.GetName }}</div>
+        {{render (printf "auth/login/providers/%v" $provider.GetName) . (get)}}
+      {{end}}
+    </div>
+  </div>
+
+  {{if qor_auth_is_registrable .Context}}
+  <div>
+    <a href="{{.AuthURL "register"}}">{{t (.I18n "form.sign_up") "Sign Up"}}</a>
+  </div>
+  {{end}}
+</div>

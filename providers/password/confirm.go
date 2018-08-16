@@ -8,12 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/qor/auth"
-	"github.com/qor/auth/auth_identity"
-	"github.com/qor/auth/claims"
-	"github.com/qor/mailer"
-	"github.com/qor/qor/utils"
-	"github.com/qor/session"
+	"github.com/aghape/auth"
+	"github.com/aghape/auth/auth_identity"
+	"github.com/aghape/auth/claims"
+	"github.com/aghape/mailer"
+	"github.com/aghape/aghape/utils"
+	"github.com/aghape/session"
 	"github.com/moisespsena/template/html/template"
 )
 

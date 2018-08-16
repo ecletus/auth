@@ -7,10 +7,10 @@ import (
 	"reflect"
 
 	"github.com/google/go-github/github"
-	"github.com/qor/auth"
-	"github.com/qor/auth/auth_identity"
-	"github.com/qor/auth/claims"
-	"github.com/qor/qor/utils"
+	"github.com/aghape/auth"
+	"github.com/aghape/auth/auth_identity"
+	"github.com/aghape/auth/claims"
+	"github.com/aghape/aghape/utils"
 	"golang.org/x/oauth2"
 )
 
@@ -136,6 +136,14 @@ func (p GithubProvider) GetName() string {
 		return p.Name
 	}
 	return p.GetDefaultName()
+}
+
+// I18n returh i18n key prefix
+func (p GithubProvider) I18n(key ...string) string {
+	if len(key) > 0 && key[0] != "" {
+		return I18N_GROUP + "." + key[0]
+	}
+	return I18N_GROUP
 }
 
 // ConfigAuth config auth
