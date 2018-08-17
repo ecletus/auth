@@ -10,7 +10,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/moisespsena/go-zxcvbn-fb"
+	"github.com/moisespsena-go/zxcvbn-fb"
 	"github.com/moisespsena/template/html/template"
 	"github.com/aghape/auth"
 	"github.com/aghape/auth/auth_identity"
