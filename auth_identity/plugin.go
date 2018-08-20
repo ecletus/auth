@@ -2,14 +2,16 @@ package auth_identity
 
 import (
 	"github.com/aghape/db"
+	"github.com/aghape/plug"
 )
 
 type Plugin struct {
-	db.DisDBNames
+	db.DBNames
+	plug.EventDispatcher
 }
 
 func (p *Plugin) OnRegister() {
-	p.DBOnMigrateGorm(func(e *db.GormDBEvent) error {
+	db.Events(p).DBOnMigrateGorm(func(e *db.GormDBEvent) error {
 		return e.DB.AutoMigrate(&AuthIdentity{}).Error
 	})
 }
