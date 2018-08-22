@@ -31,7 +31,3 @@ func (basic Basic) ToClaims() *claims.Claims {
 	claims.UserID = basic.UserID
 	return &claims
 }
-
-type UserWithPassword interface {
-	AuthIdentityGetPassword() string
-}
