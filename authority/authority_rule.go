@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aghape/aghape"
+	"github.com/aghape/core"
 	"github.com/aghape/roles"
 )
 
@@ -17,7 +17,7 @@ type Rule struct {
 // Handler generate roles checker
 func (authority Authority) Handler(rule Rule) roles.Checker {
 	return func(req *http.Request, user interface{}) bool {
-		claims, _ := authority.Auth.Get(qor.ContextFromRequest(req).SessionManager())
+		claims, _ := authority.Auth.Get(core.ContextFromRequest(req).SessionManager())
 
 		// Check Last Auth
 		if rule.TimeoutSinceLastLogin > 0 {

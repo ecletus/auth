@@ -3,8 +3,8 @@ package authority
 import (
 	"time"
 
-	"github.com/aghape/aghape"
-	"github.com/aghape/aghape/utils"
+	"github.com/aghape/core"
+	"github.com/aghape/core/utils"
 	"github.com/moisespsena/go-route"
 )
 
@@ -17,7 +17,7 @@ func (authority *Authority) Middleware() *route.Middleware {
 		Name:  "qor:authority",
 		After: []string{"qor:session"},
 		Handler: func(chain *route.ChainHandler) {
-			context := qor.ContexFromChain(chain)
+			context := core.ContexFromChain(chain)
 			sm := context.SessionManager()
 			if claims, err := authority.Auth.Get(sm); err == nil {
 				var zero time.Duration

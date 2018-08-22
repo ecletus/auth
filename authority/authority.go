@@ -3,7 +3,7 @@ package authority
 import (
 	"net/http"
 
-	"github.com/aghape/aghape"
+	"github.com/aghape/core"
 	"github.com/aghape/auth"
 	"github.com/aghape/roles"
 	"github.com/aghape/session"
@@ -77,7 +77,7 @@ func (authority *Authority) Authorize(roles ...string) func(http.Handler) http.H
 // NewAccessDeniedHandler new access denied handler
 func NewAccessDeniedHandler(Auth AuthInterface, redirectPath string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		Auth.Flash(qor.ContextFromRequest(req).SessionManager(), session.Message{Message: AccessDeniedFlashMessage})
+		Auth.Flash(core.ContextFromRequest(req).SessionManager(), session.Message{Message: AccessDeniedFlashMessage})
 		http.Redirect(w, req, redirectPath, http.StatusSeeOther)
 	}
 }

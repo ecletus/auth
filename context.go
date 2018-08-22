@@ -5,12 +5,12 @@ import (
 
 	"github.com/aghape/auth/claims"
 	"github.com/aghape/session"
-	"github.com/aghape/aghape"
+	"github.com/aghape/core"
 )
 
 // Context context
 type Context struct {
-	*qor.Context
+	*core.Context
 	*Auth
 	Claims   *claims.Claims
 	Provider Provider
@@ -50,14 +50,14 @@ func (context *Context) Set(values... interface{})  {
 }
 
 func NewContextFromRequest(r *http.Request, values... interface{}) (*http.Request, *Context) {
-	r, ctx := qor.NewContextForRequest(r)
+	r, ctx := core.NewContextForRequest(r)
 	c := &Context{Context: ctx}
 	c.Set(values...)
 	return r, c
 }
 
 func NewContextFromRequestPair(w http.ResponseWriter, r *http.Request, values... interface{}) (*http.Request, *Context) {
-	r, ctx := qor.NewContextFromRequestPair(w, r)
+	r, ctx := core.NewContextFromRequestPair(w, r)
 	c := &Context{Context: ctx}
 	c.Set(values...)
 	return r, c

@@ -9,8 +9,8 @@ import (
 	"github.com/aghape/auth/claims"
 	"github.com/aghape/mailer"
 	"github.com/aghape/mailer/logger"
-	"github.com/aghape/aghape"
-	qorconfig "github.com/aghape/aghape/config"
+	"github.com/aghape/core"
+	qorconfig "github.com/aghape/core/config"
 	"github.com/aghape/redirect_back"
 	"github.com/aghape/render"
 )
@@ -55,7 +55,7 @@ type Config struct {
 	ProfileHandler func(*Context)
 
 	// RegistrableFunc Check if Allow register new users
-	RegistrableFunc func(auth *Auth, ctx *qor.Context) bool
+	RegistrableFunc func(auth *Auth, ctx *core.Context) bool
 
 	LoginPageRedirectTo string
 }
@@ -132,14 +132,14 @@ func New(config *Config) *Auth {
 		"prefix": func() string {
 			return auth.URLPrefix
 		},
-		"qor_auth_page": func(context *qor.Context) string {
+		"qor_auth_page": func(context *core.Context) string {
 			v := context.Data().Get(AUTH_URL_KEY + ".page")
 			if v != nil {
 				return v.(string)
 			}
 			return ""
 		},
-		"qor_auth_url": func(context *qor.Context, args ...string) interface{} {
+		"qor_auth_url": func(context *core.Context, args ...string) interface{} {
 			authURL := AuthURLFromContext(context)
 			if len(args) == 0 {
 				return authURL
@@ -156,7 +156,7 @@ func New(config *Config) *Auth {
 			}
 			return ""
 		},
-		"qor_auth_prefix": func(context *qor.Context) string {
+		"qor_auth_prefix": func(context *core.Context) string {
 			return auth.URLPrefix
 		},
 		"qor_auth_is_registrable": auth.Registrable,
@@ -168,7 +168,7 @@ func New(config *Config) *Auth {
 	return auth
 }
 
-func (auth *Auth) Registrable(context *qor.Context) bool {
+func (auth *Auth) Registrable(context *core.Context) bool {
 	if auth.RegistrableFunc != nil {
 		return auth.RegistrableFunc(auth, context)
 	}

@@ -2,12 +2,12 @@ package auth
 
 import (
 	"net/http"
-	"github.com/aghape/aghape"
+	"github.com/aghape/core"
 	"github.com/moisespsena/go-route"
 )
 
 type AuthURL struct {
-	context *qor.Context
+	context *core.Context
 	Prefix  string
 }
 
@@ -34,7 +34,7 @@ func (a *AuthURL) LogoutPage(redirect ... bool) (url string) {
 var AUTH_URL_KEY = PREFIX + ".auth.url"
 
 func (auth *Auth) URL(r *http.Request) *AuthURL {
-	context := qor.ContextFromRequest(r)
+	context := core.ContextFromRequest(r)
 	url := context.Data().Get(AUTH_URL_KEY).(*AuthURL)
 	return url
 }
@@ -43,7 +43,7 @@ func (auth *Auth) Middleware() *route.Middleware {
 	return &route.Middleware{
 		Name:PREFIX,
 		Handler: func(chain *route.ChainHandler) {
-			context := qor.ContexFromChain(chain)
+			context := core.ContexFromChain(chain)
 			authUrl := context.GenGlobalURL(auth.URLPrefix)
 			context.Data().Set(PREFIX, auth, AUTH_URL_KEY, &AuthURL{context, authUrl})
 			chain.Pass()
@@ -51,6 +51,6 @@ func (auth *Auth) Middleware() *route.Middleware {
 	}
 }
 
-func AuthURLFromContext(context *qor.Context) *AuthURL {
+func AuthURLFromContext(context *core.Context) *AuthURL {
 	return context.Data().Get(AUTH_URL_KEY).(*AuthURL)
 }

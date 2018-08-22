@@ -7,7 +7,7 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/aghape/auth/auth_identity"
 	"github.com/aghape/auth/claims"
-	"github.com/aghape/aghape/utils"
+	"github.com/aghape/core/utils"
 )
 
 // UserStorerInterface user storer interface

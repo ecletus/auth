@@ -7,7 +7,7 @@ import (
 	"github.com/aghape/auth"
 	"github.com/aghape/auth/auth_identity"
 	"github.com/aghape/auth/claims"
-	"github.com/aghape/aghape/utils"
+	"github.com/aghape/core/utils"
 	"github.com/aghape/session"
 )
 

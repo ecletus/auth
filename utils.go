@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aghape/aghape"
+	"github.com/aghape/core"
 	"github.com/aghape/auth/claims"
-	"github.com/aghape/aghape/utils"
+	"github.com/aghape/core/utils"
 )
 
 // CurrentUser context key to get current user from Request
@@ -14,7 +14,7 @@ const CurrentUser utils.ContextKey = "qor:auth.current_user"
 
 // GetCurrentUser get current user from request
 func (auth *Auth) GetCurrentUser(req *http.Request) interface{} {
-	qorContext := qor.ContextFromRequest(req).Top()
+	qorContext := core.ContextFromRequest(req).Top()
 
 	if currentUser := qorContext.Data().Get(CurrentUser); currentUser != nil {
 		return currentUser
@@ -52,12 +52,12 @@ func (auth *Auth) Login(w http.ResponseWriter, r *http.Request, claimer claims.C
 	now := time.Now()
 	claims.LastLoginAt = &now
 
-	return auth.SessionStorer.Update(qor.ContextFromRequest(r).SessionManager(), claims)
+	return auth.SessionStorer.Update(core.ContextFromRequest(r).SessionManager(), claims)
 }
 
 // Logout sign current user out
 func (auth *Auth) Logout(w http.ResponseWriter, req *http.Request) {
-	auth.SessionStorer.Delete(qor.ContextFromRequest(req).SessionManager())
+	auth.SessionStorer.Delete(core.ContextFromRequest(req).SessionManager())
 }
 
 
