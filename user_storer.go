@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/jinzhu/copier"
 	"github.com/aghape/auth/auth_identity"
 	"github.com/aghape/auth/claims"
 	"github.com/aghape/core/utils"
+	"github.com/jinzhu/copier"
+	"github.com/moisespsena-go/aorm"
 )
 
 // UserStorerInterface user storer interface
@@ -27,7 +28,7 @@ func (UserStorer) Get(Claims *claims.Claims, context *Context) (user interface{}
 	if context.Auth.Config.UserModel != nil {
 		if Claims.UserID != "" {
 			currentUser := reflect.New(utils.ModelType(context.Auth.Config.UserModel)).Interface()
-			if err = tx.First(currentUser, Claims.UserID).Error; err == nil {
+			if err = tx.First(currentUser, aorm.Key(Claims.UserID)).Error; err == nil {
 				return currentUser, nil
 			}
 			return nil, ErrInvalidAccount
@@ -48,7 +49,7 @@ func (UserStorer) Get(Claims *claims.Claims, context *Context) (user interface{}
 				ToClaims() *claims.Claims
 			}); ok {
 				currentUser := reflect.New(utils.ModelType(context.Auth.Config.UserModel)).Interface()
-				if err = tx.First(currentUser, authBasicInfo.ToClaims().UserID).Error; err == nil {
+				if err = tx.First(currentUser, aorm.Key(authBasicInfo.ToClaims().UserID)).Error; err == nil {
 					return currentUser, nil
 				}
 				return nil, ErrInvalidAccount
