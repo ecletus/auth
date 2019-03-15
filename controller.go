@@ -5,7 +5,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/aghape/auth/claims"
+	"github.com/ecletus/auth/claims"
 )
 
 // NewServeMux generate http.Handler for auth

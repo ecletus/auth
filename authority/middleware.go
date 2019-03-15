@@ -3,8 +3,8 @@ package authority
 import (
 	"time"
 
-	"github.com/aghape/core"
-	"github.com/aghape/core/utils"
+	"github.com/ecletus/core"
+	"github.com/ecletus/core/utils"
 	"github.com/moisespsena-go/xroute"
 )
 

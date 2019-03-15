@@ -5,13 +5,13 @@ import (
 	"strings"
 
 	"github.com/moisespsena/template/html/template"
-	"github.com/aghape/auth"
-	"github.com/aghape/auth/auth_identity"
-	"github.com/aghape/auth/claims"
-	"github.com/aghape/auth/providers/password/encryptor"
-	"github.com/aghape/auth/providers/password/encryptor/bcrypt_encryptor"
-	"github.com/aghape/common"
-	"github.com/aghape/session"
+	"github.com/ecletus/auth"
+	"github.com/ecletus/auth/auth_identity"
+	"github.com/ecletus/auth/claims"
+	"github.com/ecletus/auth/providers/password/encryptor"
+	"github.com/ecletus/auth/providers/password/encryptor/bcrypt_encryptor"
+	"github.com/ecletus/common"
+	"github.com/ecletus/session"
 )
 
 // Config password config

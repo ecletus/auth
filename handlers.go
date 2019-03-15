@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aghape/auth/claims"
-	"github.com/aghape/responder"
-	"github.com/aghape/session"
+	"github.com/ecletus/auth/claims"
+	"github.com/ecletus/responder"
+	"github.com/ecletus/session"
 	"github.com/moisespsena/template/html/template"
 )
 

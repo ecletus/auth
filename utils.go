@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aghape/auth/claims"
-	"github.com/aghape/common"
-	"github.com/aghape/core"
-	"github.com/aghape/core/utils"
+	"github.com/ecletus/auth/claims"
+	"github.com/ecletus/common"
+	"github.com/ecletus/core"
+	"github.com/ecletus/core/utils"
 )
 
 // CurrentUser context key to get current user from Request

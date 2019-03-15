@@ -1,6 +1,6 @@
 package phone
 
-import "github.com/aghape/auth"
+import "github.com/ecletus/auth"
 
 func New() *PhoneProvider {
 	return &PhoneProvider{}

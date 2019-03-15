@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/aghape/auth/claims"
-	"github.com/aghape/session"
+	"github.com/ecletus/auth/claims"
+	"github.com/ecletus/session"
 )
 
 // SessionStorerInterface session storer interface for Auth

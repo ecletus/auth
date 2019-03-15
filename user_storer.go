@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/aghape/auth/auth_identity"
-	"github.com/aghape/auth/claims"
-	"github.com/aghape/core/utils"
+	"github.com/ecletus/auth/auth_identity"
+	"github.com/ecletus/auth/claims"
+	"github.com/ecletus/core/utils"
 	"github.com/jinzhu/copier"
 	"github.com/moisespsena-go/aorm"
 )

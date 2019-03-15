@@ -3,14 +3,14 @@ package auth
 import (
 	"strings"
 
-	"github.com/aghape/auth/auth_identity"
-	"github.com/aghape/auth/claims"
-	"github.com/aghape/core"
-	qorconfig "github.com/aghape/core/config"
-	"github.com/aghape/mailer"
-	"github.com/aghape/mailer/logger"
-	"github.com/aghape/redirect_back"
-	"github.com/aghape/render"
+	"github.com/ecletus/auth/auth_identity"
+	"github.com/ecletus/auth/claims"
+	"github.com/ecletus/core"
+	qorconfig "github.com/ecletus/core/config"
+	"github.com/ecletus/mailer"
+	"github.com/ecletus/mailer/logger"
+	"github.com/ecletus/redirect_back"
+	"github.com/ecletus/render"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/moisespsena/template/funcs"
 )
@@ -27,31 +27,31 @@ type Auth struct {
 // Config auth config
 type Config struct {
 	*qorconfig.Config
-	// AuthIdentityModel a model used to save auth info, like email/password, OAuth token, linked user's ID, https://github.com/aghape/auth/blob/master/auth_identity/auth_identity.go is the default implemention
+	// AuthIdentityModel a model used to save auth info, like email/password, OAuth token, linked user's ID, https://github.com/ecletus/auth/blob/master/auth_identity/auth_identity.go is the default implemention
 	AuthIdentityModel interface{}
 	// UserModel should be point of user struct's instance, it could be nil, then Auth will assume there is no user linked to auth info, and will return current auth info when get current user
 	UserModel interface{}
 	// Mount Auth into router with URLPrefix's value as prefix, default value is `/auth`.
 	URLPrefix string
 
-	// Auth is using [Render](https://github.com/aghape/render) to render pages, you could configure it with your project's Render if you have advanced usage like [BindataFS](https://github.com/aghape/bindatafs)
+	// Auth is using [Render](https://github.com/ecletus/render) to render pages, you could configure it with your project's Render if you have advanced usage like [BindataFS](https://github.com/ecletus/bindatafs)
 	Render *render.Render
-	// Auth is using [Mailer](https://github.com/aghape/mailer) to send email, by default, it will print email into console, you need to configure it to send real one
+	// Auth is using [Mailer](https://github.com/ecletus/mailer) to send email, by default, it will print email into console, you need to configure it to send real one
 	Mailer *mailer.Mailer
 	// UserStorer is an interface that defined how to get/save user, Auth provides a default one based on AuthIdentityModel, UserModel's definition
 	UserStorer UserStorerInterface
-	// SessionStorer is an interface that defined how to encode/validate/save/destroy session data and flash messages between requests, Auth provides a default method do the job, to use the default value, don't forgot to mount SessionManager's middleware into your router to save session data correctly. refer [session](https://github.com/aghape/session) for more details
+	// SessionStorer is an interface that defined how to encode/validate/save/destroy session data and flash messages between requests, Auth provides a default method do the job, to use the default value, don't forgot to mount SessionManager's middleware into your router to save session data correctly. refer [session](https://github.com/ecletus/session) for more details
 	SessionStorer SessionStorerInterface
 	// Redirector redirect user to a new page after registered, logged, confirmed...
 	Redirector RedirectorInterface
 
-	// LoginHandler defined behaviour when request `{Auth Prefix}/login`, default behaviour defined in http://godoc.org/github.com/aghape/auth#pkg-variables
+	// LoginHandler defined behaviour when request `{Auth Prefix}/login`, default behaviour defined in http://godoc.org/github.com/ecletus/auth#pkg-variables
 	LoginHandler func(*Context, func(*Context) (*claims.Claims, error))
-	// RegisterHandler defined behaviour when request `{Auth Prefix}/register`, default behaviour defined in http://godoc.org/github.com/aghape/auth#pkg-variables
+	// RegisterHandler defined behaviour when request `{Auth Prefix}/register`, default behaviour defined in http://godoc.org/github.com/ecletus/auth#pkg-variables
 	RegisterHandler func(*Context, func(*Context) (*claims.Claims, error))
-	// LogoutHandler defined behaviour when request `{Auth Prefix}/logout`, default behaviour defined in http://godoc.org/github.com/aghape/auth#pkg-variables
+	// LogoutHandler defined behaviour when request `{Auth Prefix}/logout`, default behaviour defined in http://godoc.org/github.com/ecletus/auth#pkg-variables
 	LogoutHandler func(*Context)
-	// ProfileHandler defined behaviour when request `{Auth Prefix}/profile`, default behaviour defined in http://godoc.org/github.com/aghape/auth#pkg-variables
+	// ProfileHandler defined behaviour when request `{Auth Prefix}/profile`, default behaviour defined in http://godoc.org/github.com/ecletus/auth#pkg-variables
 	ProfileHandler func(*Context)
 
 	// RegistrableFunc Check if Allow register new users

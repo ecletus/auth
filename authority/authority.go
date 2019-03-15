@@ -3,12 +3,12 @@ package authority
 import (
 	"net/http"
 
-	"github.com/aghape/auth"
-	"github.com/aghape/common"
-	"github.com/aghape/core"
-	"github.com/aghape/roles"
-	"github.com/aghape/session"
-	_ "github.com/aghape/session/manager"
+	"github.com/ecletus/auth"
+	"github.com/ecletus/common"
+	"github.com/ecletus/core"
+	"github.com/ecletus/roles"
+	"github.com/ecletus/session"
+	_ "github.com/ecletus/session/manager"
 	"github.com/moisespsena/template/html/template"
 )
 

@@ -3,9 +3,9 @@ package auth
 import (
 	"net/http"
 
-	"github.com/aghape/auth/claims"
-	"github.com/aghape/core"
-	"github.com/aghape/session"
+	"github.com/ecletus/auth/claims"
+	"github.com/ecletus/core"
+	"github.com/ecletus/session"
 )
 
 // Context context

@@ -4,11 +4,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/aghape/auth"
-	"github.com/aghape/auth/auth_identity"
-	"github.com/aghape/auth/claims"
-	"github.com/aghape/core/utils"
-	"github.com/aghape/session"
+	"github.com/ecletus/auth"
+	"github.com/ecletus/auth/auth_identity"
+	"github.com/ecletus/auth/claims"
+	"github.com/ecletus/core/utils"
+	"github.com/ecletus/session"
 )
 
 // DefaultAuthorizeHandler default authorize handler

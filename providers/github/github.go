@@ -7,10 +7,10 @@ import (
 	"reflect"
 
 	"github.com/google/go-github/github"
-	"github.com/aghape/auth"
-	"github.com/aghape/auth/auth_identity"
-	"github.com/aghape/auth/claims"
-	"github.com/aghape/core/utils"
+	"github.com/ecletus/auth"
+	"github.com/ecletus/auth/auth_identity"
+	"github.com/ecletus/auth/claims"
+	"github.com/ecletus/core/utils"
 	"golang.org/x/oauth2"
 )
 

@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aghape/core"
-	"github.com/aghape/roles"
+	"github.com/ecletus/core"
+	"github.com/ecletus/roles"
 )
 
 // Rule authority rule's definition

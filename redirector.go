@@ -3,7 +3,7 @@ package auth
 import (
 	"net/http"
 
-	"github.com/aghape/redirect_back"
+	"github.com/ecletus/redirect_back"
 	"github.com/moisespsena-go/xroute"
 )
 

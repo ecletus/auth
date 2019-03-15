@@ -3,7 +3,7 @@ package auth_identity
 import (
 	"time"
 
-	"github.com/aghape/auth/claims"
+	"github.com/ecletus/auth/claims"
 	"github.com/moisespsena-go/aorm"
 )
 
