@@ -3,16 +3,16 @@ package auth
 import (
 	"strings"
 
-	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/moisespsena/template/funcs"
 	"github.com/aghape/auth/auth_identity"
 	"github.com/aghape/auth/claims"
-	"github.com/aghape/mailer"
-	"github.com/aghape/mailer/logger"
 	"github.com/aghape/core"
 	qorconfig "github.com/aghape/core/config"
+	"github.com/aghape/mailer"
+	"github.com/aghape/mailer/logger"
 	"github.com/aghape/redirect_back"
 	"github.com/aghape/render"
+	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/moisespsena/template/funcs"
 )
 
 // Auth auth struct
@@ -58,6 +58,8 @@ type Config struct {
 	RegistrableFunc func(auth *Auth, ctx *core.Context) bool
 
 	LoginPageRedirectTo string
+
+	ContextFactory *core.ContextFactory
 }
 
 // New initialize Auth
@@ -176,6 +178,10 @@ func (auth *Auth) Registrable(context *core.Context) bool {
 }
 
 func (auth *Auth) I18n(key ...string) string {
+	return I18n(key...)
+}
+
+func I18n(key ...string) string {
 	if len(key) > 0 && key[0] != "" {
 		return I18N_GROUP + "." + key[0]
 	}

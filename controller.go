@@ -26,7 +26,7 @@ func (serveMux *serveMux) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		render  = serveMux.Auth.Render.Template()
 	)
 
-	req, context := NewContextFromRequestPair(w, req, serveMux.Auth, claims)
+	req, context := serveMux.NewContextFromRequestPair(w, req, claims)
 
 	if len(paths) >= 2 {
 		// render assets

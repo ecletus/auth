@@ -3,7 +3,7 @@ package auth
 import (
 	"net/http"
 	"github.com/aghape/core"
-	"github.com/moisespsena/go-route"
+	"github.com/moisespsena-go/xroute"
 )
 
 type AuthURL struct {
@@ -39,10 +39,10 @@ func (auth *Auth) URL(r *http.Request) *AuthURL {
 	return url
 }
 
-func (auth *Auth) Middleware() *route.Middleware {
-	return &route.Middleware{
+func (auth *Auth) Middleware() *xroute.Middleware {
+	return &xroute.Middleware{
 		Name:PREFIX,
-		Handler: func(chain *route.ChainHandler) {
+		Handler: func(chain *xroute.ChainHandler) {
 			context := core.ContexFromChain(chain)
 			authUrl := context.GenGlobalURL(auth.URLPrefix)
 			context.Data().Set(PREFIX, auth, AUTH_URL_KEY, &AuthURL{context, authUrl})

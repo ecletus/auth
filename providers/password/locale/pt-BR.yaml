@@ -2,3 +2,6 @@ name: Senha
 login: Nome de Usuário
 password: Senha
 forgot_password_question: Esqueceu sua Senha?
+reset_your_password: Atualize a sua senha
+change_password_mail_body: Você receberá um email com instruções sobre como redefinir sua senha em alguns minutos
+your_password_changed: Sua senha foi atualizada com sucesso!

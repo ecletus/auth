@@ -19,16 +19,26 @@ type UserStorerInterface interface {
 
 // UserStorer default user storer
 type UserStorer struct {
+	FindFunc   func(context *Context, out interface{}, key aorm.KeyInterface) error
+	CreateFunc func(context *Context, out interface{}) error
 }
 
 // Get defined how to get user with user id
-func (UserStorer) Get(Claims *claims.Claims, context *Context) (user interface{}, err error) {
+func (us UserStorer) Get(Claims *claims.Claims, context *Context) (user interface{}, err error) {
 	var tx = context.DB
 
 	if context.Auth.Config.UserModel != nil {
 		if Claims.UserID != "" {
-			currentUser := reflect.New(utils.ModelType(context.Auth.Config.UserModel)).Interface()
-			if err = tx.First(currentUser, aorm.Key(Claims.UserID)).Error; err == nil {
+			var (
+				currentUser = reflect.New(utils.ModelType(context.Auth.Config.UserModel)).Interface()
+				key         = aorm.Key(Claims.UserID)
+			)
+			if us.FindFunc != nil {
+				err = us.FindFunc(context, currentUser, key)
+			} else {
+				err = tx.First(currentUser, key).Error
+			}
+			if err == nil {
 				return currentUser, nil
 			}
 			return nil, ErrInvalidAccount
@@ -48,8 +58,17 @@ func (UserStorer) Get(Claims *claims.Claims, context *Context) (user interface{}
 			if authBasicInfo, ok := authIdentity.(interface {
 				ToClaims() *claims.Claims
 			}); ok {
-				currentUser := reflect.New(utils.ModelType(context.Auth.Config.UserModel)).Interface()
-				if err = tx.First(currentUser, aorm.Key(authBasicInfo.ToClaims().UserID)).Error; err == nil {
+				var (
+					currentUser = reflect.New(utils.ModelType(context.Auth.Config.UserModel)).Interface()
+					key         = aorm.Key(authBasicInfo.ToClaims().UserID)
+				)
+				if us.FindFunc != nil {
+					err = us.FindFunc(context, currentUser, key)
+				} else {
+					err = tx.First(currentUser, key).Error
+				}
+
+				if err == nil {
 					return currentUser, nil
 				}
 				return nil, ErrInvalidAccount
@@ -63,13 +82,17 @@ func (UserStorer) Get(Claims *claims.Claims, context *Context) (user interface{}
 }
 
 // Save defined how to save user
-func (UserStorer) Save(schema *Schema, context *Context) (user interface{}, userID string, err error) {
+func (us UserStorer) Save(schema *Schema, context *Context) (user interface{}, userID string, err error) {
 	var db = context.DB
 
 	if context.Auth.Config.UserModel != nil {
 		currentUser := reflect.New(utils.ModelType(context.Auth.Config.UserModel)).Interface()
 		copier.Copy(currentUser, schema)
-		err = db.Create(currentUser).Error
+		if us.CreateFunc != nil {
+			err = us.CreateFunc(context, currentUser)
+		} else {
+			err = db.Create(currentUser).Error
+		}
 		return currentUser, fmt.Sprint(db.NewScope(currentUser).PrimaryKeyValue()), err
 	}
 	return nil, "", nil

@@ -26,6 +26,11 @@ passwords:
   forgot_password_desc: "Entre com seu endereço de e-mail e solicite uma nova senha."
   current_password_not_match: "Senha atual não confere."
   passwords_not_match: "Senhas não conferem."
+  password_too_weak: "Senha muito fraca. Entre com uma senha com pelo menos seis caracters, incluindo letras, números e caracteres especiais."
+  create_user_identity: "Criar identidade do usuário"
+  strength_test_failed: "Falha ao testar a força da senha"
+  load_admin_user_failed: "Falha ao carregar o usuário administrador"
+  admin_user_not_found: "Usuário administrador não está cadastrado"
 links:
   sign_in: "Já é registrado? Entre"
   sign_in_with: "Acessar com {{$1}}"

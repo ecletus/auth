@@ -4,14 +4,14 @@ import (
 	"net/http"
 
 	"github.com/aghape/redirect_back"
-	"github.com/moisespsena/go-route"
+	"github.com/moisespsena-go/xroute"
 )
 
 // RedirectorInterface redirector interface
 type RedirectorInterface interface {
 	// Redirect redirect after action
 	Redirect(w http.ResponseWriter, req *http.Request, action string)
-	Middleware() *route.Middleware
+	Middleware() *xroute.Middleware
 }
 
 // Redirector default redirector

@@ -3,8 +3,9 @@ package authority
 import (
 	"net/http"
 
-	"github.com/aghape/core"
 	"github.com/aghape/auth"
+	"github.com/aghape/common"
+	"github.com/aghape/core"
 	"github.com/aghape/roles"
 	"github.com/aghape/session"
 	_ "github.com/aghape/session/manager"
@@ -24,7 +25,7 @@ type Authority struct {
 // AuthInterface auth interface
 type AuthInterface interface {
 	auth.SessionStorerInterface
-	GetCurrentUser(req *http.Request) interface{}
+	GetCurrentUser(req *http.Request) common.User
 }
 
 // Config authority config

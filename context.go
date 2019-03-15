@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/aghape/auth/claims"
-	"github.com/aghape/session"
 	"github.com/aghape/core"
+	"github.com/aghape/session"
 )
 
 // Context context
@@ -38,7 +38,7 @@ func (context *Context) AuthStaticURL(path string) string {
 	return context.GenStaticURL(context.Auth.AuthURL(path))
 }
 
-func (context *Context) Set(values... interface{})  {
+func (context *Context) Set(values ...interface{}) {
 	for _, value := range values {
 		switch v := value.(type) {
 		case *Auth:
@@ -49,16 +49,16 @@ func (context *Context) Set(values... interface{})  {
 	}
 }
 
-func NewContextFromRequest(r *http.Request, values... interface{}) (*http.Request, *Context) {
-	r, ctx := core.NewContextForRequest(r)
-	c := &Context{Context: ctx}
+func (auth *Auth) NewContextFromRequest(r *http.Request, values ...interface{}) (*http.Request, *Context) {
+	r, ctx := auth.ContextFactory.NewContextForRequest(r)
+	c := &Context{Context: ctx, Auth: auth}
 	c.Set(values...)
 	return r, c
 }
 
-func NewContextFromRequestPair(w http.ResponseWriter, r *http.Request, values... interface{}) (*http.Request, *Context) {
-	r, ctx := core.NewContextFromRequestPair(w, r)
-	c := &Context{Context: ctx}
+func (auth *Auth) NewContextFromRequestPair(w http.ResponseWriter, r *http.Request, values ...interface{}) (*http.Request, *Context) {
+	r, ctx := auth.ContextFactory.NewContextFromRequestPair(w, r)
+	c := &Context{Context: ctx, Auth: auth}
 	c.Set(values...)
 	return r, c
 }

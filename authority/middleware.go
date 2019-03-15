@@ -5,18 +5,18 @@ import (
 
 	"github.com/aghape/core"
 	"github.com/aghape/core/utils"
-	"github.com/moisespsena/go-route"
+	"github.com/moisespsena-go/xroute"
 )
 
 // ClaimsContextKey authority claims key
 var ClaimsContextKey utils.ContextKey = "authority_claims"
 
 // Middleware authority middleware used to record activity time
-func (authority *Authority) Middleware() *route.Middleware {
-	return &route.Middleware{
+func (authority *Authority) Middleware() *xroute.Middleware {
+	return &xroute.Middleware{
 		Name:  "qor:authority",
 		After: []string{"qor:session"},
-		Handler: func(chain *route.ChainHandler) {
+		Handler: func(chain *xroute.ChainHandler) {
 			context := core.ContexFromChain(chain)
 			sm := context.SessionManager()
 			if claims, err := authority.Auth.Get(sm); err == nil {
@@ -44,6 +44,7 @@ func (authority *Authority) Middleware() *route.Middleware {
 				claims.LastActiveAt = &now
 
 				authority.Auth.Update(sm, claims)
+				authority.Auth.GetCurrentUser(context.Request)
 			}
 
 			chain.Pass()

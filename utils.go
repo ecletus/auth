@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aghape/core"
 	"github.com/aghape/auth/claims"
+	"github.com/aghape/common"
+	"github.com/aghape/core"
 	"github.com/aghape/core/utils"
 )
 
@@ -13,23 +14,33 @@ import (
 const CurrentUser utils.ContextKey = "qor:auth.current_user"
 
 // GetCurrentUser get current user from request
-func (auth *Auth) GetCurrentUser(req *http.Request) interface{} {
+func (auth *Auth) GetCurrentUser(req *http.Request) (currentUser common.User) {
 	qorContext := core.ContextFromRequest(req).Top()
 
-	if currentUser := qorContext.Data().Get(CurrentUser); currentUser != nil {
+	if currentUser = qorContext.CurrentUser(); currentUser != nil {
 		return currentUser
+	}
+
+	defer func() {
+		if currentUser != nil {
+			qorContext.SetCurrentUser(currentUser)
+		}
+	}()
+
+	if user := qorContext.Data().Get(CurrentUser); user != nil {
+		return user.(common.User)
 	}
 
 	claims, err := auth.SessionStorer.Get(qorContext.SessionManager())
 	if err == nil {
-		_, context := NewContextFromRequest(req, auth, claims)
+		_, context := auth.NewContextFromRequest(req, auth, claims)
 		if user, err := auth.UserStorer.Get(claims, context); err == nil {
 			qorContext.Data().Set(CurrentUser, user)
-			return user
+			currentUser = user.(common.User)
 		}
 	}
 
-	return nil
+	return
 }
 
 func (auth *Auth) InterceptFunc(w http.ResponseWriter, r *http.Request, f func()) {
@@ -60,12 +71,10 @@ func (auth *Auth) Logout(w http.ResponseWriter, req *http.Request) {
 	auth.SessionStorer.Delete(core.ContextFromRequest(req).SessionManager())
 }
 
-
-
 func InterceptFuncIfAuth(authp interface{}, w http.ResponseWriter, r *http.Request, f func(bool)) {
 	var (
 		auth *Auth
-		ok bool
+		ok   bool
 	)
 
 	if authp != nil {
@@ -79,7 +88,6 @@ func InterceptFuncIfAuth(authp interface{}, w http.ResponseWriter, r *http.Reque
 			}
 		}
 	}
-
 
 	if auth != nil {
 		auth.InterceptFunc(w, r, func() {
