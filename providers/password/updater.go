@@ -14,7 +14,7 @@ import (
 	"github.com/ecletus/session"
 	"github.com/moisespsena-go/aorm"
 	"github.com/moisespsena-go/zxcvbn-fb"
-	"github.com/moisespsena/go-error-wrap"
+	"github.com/moisespsena-go/error-wrap"
 	"golang.org/x/crypto/bcrypt"
 )
 
