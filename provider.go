@@ -1,13 +1,18 @@
 package auth
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/ecletus/auth/claims"
+)
 
 // Provider define Provider interface
 type Provider interface {
 	GetName() string
 
 	ConfigAuth(*Auth)
-	Login(*Context)
+	PrepareLoginContext(*LoginContext) error
+	Login(*LoginContext) (*claims.Claims, error)
 	Logout(*Context)
 	Register(*Context)
 	Callback(*Context)

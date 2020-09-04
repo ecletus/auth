@@ -10,66 +10,56 @@ import (
 	"strings"
 	"time"
 
+	"encoding/json"
+
 	"github.com/ecletus/auth/claims"
 	"github.com/ecletus/responder"
 	"github.com/ecletus/session"
+	"github.com/moisespsena-go/assetfs"
 	"github.com/moisespsena/template/html/template"
 )
 
-func respondAfterLogged(claims *claims.Claims, context *Context) {
-	// login user
-	context.Auth.Login(context.Writer, context.Request, claims)
-
-	responder.With("html", func() {
-		// write cookie
-		context.Auth.Redirector.Redirect(context.Writer, context.Request, "login")
-	}).With([]string{"json"}, func() {
-		// TODO write json token
-	}).Respond(context.Request)
+func respond(ctx *LoginContext, claims *claims.Claims, path string) {
+	if ctx.HasError() {
+		if !ctx.SilentError {
+			responder.With("html", func() {
+				for _, err := range ctx.GetErrorsTS() {
+					ctx.SessionStorer.Flash(ctx.SessionManager(), session.Message{Message: template.HTML(err), Type: "error"})
+				}
+				ctx.Auth.Redirector.Redirect(ctx.Writer, ctx.Request, path)
+			}).With("json", func() {
+				json.NewEncoder(ctx).Encode(ctx.ErrorResult())
+			}).Respond(ctx.Request)
+		}
+	} else if !ctx.Silent {
+		responder.With("html", func() {
+			ctx.Auth.Redirector.Redirect(ctx.Writer, ctx.Request, path)
+		}).With("json", func() {
+			json.NewEncoder(ctx).Encode(map[string]interface{}{"SessionID": claims.Id, "UserID": claims.UserID})
+		}).Respond(ctx.Request)
+	}
 }
 
 // DefaultLoginHandler default login behaviour
-var DefaultLoginHandler = func(context *Context, authorize func(*Context) (*claims.Claims, error)) {
-	var (
-		claims, err = authorize(context)
-	)
-
-	if err == nil && claims != nil {
-		context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: "logged"})
-		respondAfterLogged(claims, context)
+var DefaultLoginHandler = func(context *LoginContext, authorize func(*LoginContext) (*claims.Claims, error)) (claims *claims.Claims, err error) {
+	if claims, err = authorize(context); err == nil {
+		if err = context.Auth.Signed(context.Context.Context, claims); err != nil {
+			if err == ErrMaximumNumberOfAccessesReached {
+				http.Error(context.Writer, err.Error(), http.StatusForbidden)
+				return
+			}
+			http.Error(context.Writer, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		return
 	}
-
-	context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: template.HTML(err.Error()), Type: "error"})
-
-	// error handling
-	responder.With("html", func() {
-		context.Auth.Config.Render.Execute("auth/login", context, context.Context)
-	}).With([]string{"json"}, func() {
-		// TODO write json error
-	}).Respond(context.Request)
+	return
 }
 
 // DefaultRegisterHandler default register behaviour
 var DefaultRegisterHandler = func(context *Context, register func(*Context) (*claims.Claims, error)) {
-	var (
-		claims, err = register(context)
-	)
-
-	if err == nil && claims != nil {
-		respondAfterLogged(claims, context)
-		return
-	}
-
-	context.SessionStorer.Flash(context.SessionManager(),
-		session.Message{Message: template.HTML(err.Error()), Type: "error"})
-
-	// error handling
-	responder.With("html", func() {
-		context.Auth.Config.Render.Execute("auth/register", context, context.Context)
-	}).With([]string{"json"}, func() {
-		// TODO write json error
-	}).Respond(context.Request)
+	claims, _ := register(context)
+	respond(&LoginContext{Context: context}, claims, "auth/register")
 }
 
 // DefaultLogoutHandler default logout behaviour
@@ -102,7 +92,7 @@ var DefaultAssetHandler = func(context *Context) {
 	context.Writer.Header().Set("Last-Modified", cacheSince)
 
 	if asset, err := context.Auth.Config.Render.Asset(path.Join("/auth", pth)); err == nil {
-		etag := fmt.Sprintf("%x", md5.Sum(asset.GetData()))
+		etag := fmt.Sprintf("%x", md5.Sum(assetfs.MustData(asset)))
 		if context.Request.Header.Get("If-None-Match") == etag {
 			context.Writer.WriteHeader(http.StatusNotModified)
 			return
@@ -114,7 +104,7 @@ var DefaultAssetHandler = func(context *Context) {
 
 		context.Writer.Header().Set("Cache-control", "private, must-revalidate, max-age=300")
 		context.Writer.Header().Set("ETag", etag)
-		context.Writer.Write(asset.GetData())
+		context.Writer.Write(assetfs.MustData(asset))
 	} else {
 		http.NotFound(context.Writer, context.Request)
 	}

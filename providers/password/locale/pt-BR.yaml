@@ -2,6 +2,19 @@ name: Senha
 login: Nome de Usuário
 password: Senha
 forgot_password_question: Esqueceu sua Senha?
-reset_your_password: Atualize a sua senha
+reset_your_password: Atualize sua senha
 change_password_mail_body: Você receberá um email com instruções sobre como redefinir sua senha em alguns minutos
 your_password_changed: Sua senha foi atualizada com sucesso!
+reset_password: Redefina sua senha
+forgot_password: Esqueceu a senha?
+forgot_password_desc: Entre com seu endereço de e-mail e solicite uma nova senha.
+create_user_identity: Criar identidade do usuário
+errors:
+  admin_user_not_found: Usuário administrador não está cadastrado
+  current_password_not_match: Senha atual não confere.
+  invalid_reset_token: A chave para redefinição da senha não é válido
+  load_admin_user_failed: "Falha ao carregar o usuário administrador"
+  passwords_not_match: Senhas não conferem.
+  password_too_weak: Senha muito fraca. Entre com uma senha com pelo menos seis caracters, incluindo letras, números e caracteres especiais.
+  strength_test_failed: Falha ao testar a força da senha
+  user_identity_creation_failed: Falha ao criar a identidade do usuário

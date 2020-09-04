@@ -169,7 +169,7 @@ func (provider GithubProvider) OAuthConfig(context *auth.Context) *oauth2.Config
 			AuthURL:  config.AuthorizeURL,
 			TokenURL: config.TokenURL,
 		},
-		RedirectURL: scheme + req.Host + context.Auth.AuthURL("github/callback"),
+		RedirectURL: scheme + req.Host + context.Auth.AuthPath("github/callback"),
 		Scopes:      config.Scopes,
 	}
 }
@@ -178,7 +178,7 @@ func (provider GithubProvider) OAuthConfig(context *auth.Context) *oauth2.Config
 func (provider GithubProvider) Login(context *auth.Context) {
 	claims := claims.Claims{}
 	claims.Subject = "state"
-	signedToken := context.Auth.SessionStorer.SignedToken(&claims)
+	signedToken, _ := context.Auth.SessionStorer.SignedToken(&claims)
 
 	url := provider.OAuthConfig(context).AuthCodeURL(signedToken)
 	http.Redirect(context.Writer, context.Request, url, http.StatusFound)

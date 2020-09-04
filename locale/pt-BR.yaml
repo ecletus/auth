@@ -1,7 +1,12 @@
 sign_in: "Entrar"
 or_sign_in_with: "OU ACESSAR COM"
+or_sign_in: OU entrar
 sign_up: "Registrar"
+sign_out: "Sair"
 my_profile: "Meu Perfil"
+my_account: "Minha Conta"
+logged_as~: "{{.DisplayName}}"
+recover: "Recuperar"
 form:
   email: "Endereço e-mail"
   email_placeholder: "endereço de email"
@@ -9,6 +14,7 @@ form:
   password_placeholder: "senha"
   new_password: "Nova Senha"
   new_password_placeholder: "Entre com a nova senha"
+  new_password_submit: "Definir a nova senha"
   password_confirm: "Confirme a nova senha"
   password_confirm_placeholder: "Confirme a nova senha"
   sign_in: "Entrar"
@@ -18,6 +24,8 @@ form:
   login_with: "Acessar com"
   current_password: "Senha atual"
   current_password_placeholder: "Entre com a senha atual"
+  identification: "Identificação"
+  identification_placeholder: "Identificação"
 confirmations:
   resend_confirmation: "Confirmação de Recuperação de Senha"
 passwords:
@@ -36,3 +44,7 @@ links:
   sign_in_with: "Acessar com {{$1}}"
   sign_up: "Não tem uma counta? Clique aqui e faça seu cadastro."
   forgot_password: "Esqueceu sua senha?"
+errors:
+  invalid_account: "Usuário inválido."
+  unauthorized: "Usuário não autorizada."
+  invalid_password: "Senha inválida."

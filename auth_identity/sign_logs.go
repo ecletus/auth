@@ -7,11 +7,15 @@ import (
 	"time"
 )
 
+
 // SignLogs record sign in logs
 type SignLogs struct {
 	Log         string `sql:"-"`
 	SignInCount uint
 	Logs        []SignLog
+}
+
+func (SignLogs) AormNonFieldStructor() {
 }
 
 // Scan scan data into sign logs

@@ -3,6 +3,9 @@ package authority
 import (
 	"net/http"
 
+	"github.com/moisespsena-go/path-helpers"
+	"github.com/op/go-logging"
+
 	"github.com/ecletus/auth"
 	"github.com/ecletus/common"
 	"github.com/ecletus/core"
@@ -13,6 +16,8 @@ import (
 )
 
 var (
+	log = logging.MustGetLogger(path_helpers.GetCalledDir())
+
 	// AccessDeniedFlashMessage access denied message
 	AccessDeniedFlashMessage = template.HTML("Access Denied!")
 )
@@ -25,7 +30,9 @@ type Authority struct {
 // AuthInterface auth interface
 type AuthInterface interface {
 	auth.SessionStorerInterface
-	GetCurrentUser(req *http.Request) common.User
+	auth.SignedCallbacker
+
+	GetCurrentUser(req *http.Request) (user common.User, err error)
 }
 
 // Config authority config
@@ -46,7 +53,7 @@ func New(config *Config) *Authority {
 	}
 
 	if config.Role == nil {
-		config.Role = roles.Global
+		config.Role = &roles.Role{}
 	}
 
 	if config.AccessDeniedHandler == nil {
@@ -60,10 +67,12 @@ func New(config *Config) *Authority {
 func (authority *Authority) Authorize(roles ...string) func(http.Handler) http.Handler {
 	return func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			var currentUser interface{}
-
 			// Get current user from request
-			currentUser = authority.Auth.GetCurrentUser(req)
+			currentUser, err := authority.Auth.GetCurrentUser(req)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 
 			if (len(roles) == 0 && currentUser != nil) || authority.Role.HasRole(req, currentUser, roles...) {
 				handler.ServeHTTP(w, req)

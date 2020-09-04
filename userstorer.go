@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/ecletus/auth/auth_identity"
@@ -11,37 +10,47 @@ import (
 	"github.com/moisespsena-go/aorm"
 )
 
+type User interface {
+	Schema() *Schema
+}
+
 // UserStorerInterface user storer interface
 type UserStorerInterface interface {
-	Save(schema *Schema, context *Context) (user interface{}, userID string, err error)
-	Get(claims *claims.Claims, context *Context) (user interface{}, err error)
+	Save(schema *Schema, context *Context) (user User, userId aorm.ID, err error)
+	Get(claims *claims.Claims, context *Context) (user User, err error)
 }
 
 // UserStorer default user storer
 type UserStorer struct {
-	FindFunc   func(context *Context, out interface{}, key aorm.KeyInterface) error
+	FindFunc   func(context *Context, out interface{}, key aorm.ID) error
 	CreateFunc func(context *Context, out interface{}) error
 }
 
 // Get defined how to get user with user id
-func (us UserStorer) Get(Claims *claims.Claims, context *Context) (user interface{}, err error) {
-	var tx = context.DB
+func (us UserStorer) Get(Claims *claims.Claims, context *Context) (user User, err error) {
+	var db = context.DB()
 
 	if context.Auth.Config.UserModel != nil {
 		if Claims.UserID != "" {
 			var (
 				currentUser = reflect.New(utils.ModelType(context.Auth.Config.UserModel)).Interface()
-				key         = aorm.Key(Claims.UserID)
+				key         aorm.ID
 			)
+			if key, err = aorm.StructOf(currentUser).ParseIDString(Claims.UserID); err != nil {
+				return
+			}
 			if us.FindFunc != nil {
 				err = us.FindFunc(context, currentUser, key)
 			} else {
-				err = tx.First(currentUser, key).Error
+				err = db.First(currentUser, key).Error
 			}
 			if err == nil {
-				return currentUser, nil
+				return currentUser.(User), nil
 			}
-			return nil, ErrInvalidAccount
+			if aorm.IsRecordNotFoundError(err) {
+				return nil, ErrInvalidAccount
+			}
+			return
 		}
 	}
 
@@ -53,37 +62,41 @@ func (us UserStorer) Get(Claims *claims.Claims, context *Context) (user interfac
 		}
 	)
 
-	if !tx.Where(authInfo).First(authIdentity).RecordNotFound() {
+	if !db.Where(authInfo).First(authIdentity).RecordNotFound() {
 		if context.Auth.Config.UserModel != nil {
 			if authBasicInfo, ok := authIdentity.(interface {
 				ToClaims() *claims.Claims
 			}); ok {
 				var (
 					currentUser = reflect.New(utils.ModelType(context.Auth.Config.UserModel)).Interface()
-					key         = aorm.Key(authBasicInfo.ToClaims().UserID)
+					key         aorm.ID
+					err         error
 				)
+				if key, err = db.NewScope(context.Auth.Config.UserModel).Struct().ParseIDString(authBasicInfo.ToClaims().UserID); err != nil {
+					return nil, err
+				}
 				if us.FindFunc != nil {
 					err = us.FindFunc(context, currentUser, key)
 				} else {
-					err = tx.First(currentUser, key).Error
+					err = db.First(currentUser, key).Error
 				}
 
 				if err == nil {
-					return currentUser, nil
+					return currentUser.(User), nil
 				}
-				return nil, ErrInvalidAccount
+				return nil, err
 			}
 		}
 
-		return authIdentity, nil
+		return &identityUser{authIdentity.(auth_identity.AuthIdentityInterface)}, nil
 	}
 
 	return nil, ErrInvalidAccount
 }
 
 // Save defined how to save user
-func (us UserStorer) Save(schema *Schema, context *Context) (user interface{}, userID string, err error) {
-	var db = context.DB
+func (us UserStorer) Save(schema *Schema, context *Context) (user User, userID aorm.ID, err error) {
+	var db = context.DB()
 
 	if context.Auth.Config.UserModel != nil {
 		currentUser := reflect.New(utils.ModelType(context.Auth.Config.UserModel)).Interface()
@@ -93,7 +106,20 @@ func (us UserStorer) Save(schema *Schema, context *Context) (user interface{}, u
 		} else {
 			err = db.Create(currentUser).Error
 		}
-		return currentUser, fmt.Sprint(db.NewScope(currentUser).PrimaryKeyValue()), err
+		return currentUser.(User), aorm.IdOf(currentUser), err
 	}
-	return nil, "", nil
+	return
+}
+
+type identityUser struct {
+	auth_identity.AuthIdentityInterface
+}
+
+func (this identityUser) Schema() *Schema {
+	basic := this.GetAuthBasic()
+	return &Schema{
+		Provider: basic.Provider,
+		UID:      basic.UID,
+		RawInfo:  this,
+	}
 }

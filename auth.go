@@ -3,17 +3,28 @@ package auth
 import (
 	"strings"
 
+	"github.com/ecletus/common"
+
+	"github.com/dgrijalva/jwt-go"
 	"github.com/ecletus/auth/auth_identity"
 	"github.com/ecletus/auth/claims"
 	"github.com/ecletus/core"
-	qorconfig "github.com/ecletus/core/config"
 	"github.com/ecletus/mailer"
-	"github.com/ecletus/mailer/logger"
 	"github.com/ecletus/redirect_back"
 	"github.com/ecletus/render"
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/ecletus/sites"
 	"github.com/moisespsena/template/funcs"
 )
+
+// Interface is an auth interface that used to qor admin
+// If you want to implement an authorization gateway for admin interface, you could implement this interface, and set it to the admin with `admin.SetAuth(auth)`
+type Interface interface {
+	GetCurrentUser(*Context) common.User
+	LoginURL(*Context) string
+	LogoutURL(*Context) string
+	ProfileURL(c *Context) string
+	Auth() *Auth
+}
 
 // Auth auth struct
 type Auth struct {
@@ -21,13 +32,13 @@ type Auth struct {
 	// Embed SessionStorer to match Authority's AuthInterface
 	SessionStorerInterface
 	providers map[string]Provider
-	Funcs     *funcs.FuncValues
+	Funcs     funcs.FuncValues
 }
 
 // Config auth config
 type Config struct {
-	*qorconfig.Config
-	// AuthIdentityModel a model used to save auth info, like email/password, OAuth token, linked user's ID, https://github.com/ecletus/auth/blob/master/auth_identity/auth_identity.go is the default implemention
+	*sites.SiteConfig
+	// AuthIdentityModel a model used to save auth info, like email/password, OAuth token, linked user's BID, https://github.com/ecletus/auth/blob/master/auth_identity/auth_identity.go is the default implemention
 	AuthIdentityModel interface{}
 	// UserModel should be point of user struct's instance, it could be nil, then Auth will assume there is no user linked to auth info, and will return current auth info when get current user
 	UserModel interface{}
@@ -36,7 +47,7 @@ type Config struct {
 
 	// Auth is using [Render](https://github.com/ecletus/render) to render pages, you could configure it with your project's Render if you have advanced usage like [BindataFS](https://github.com/ecletus/bindatafs)
 	Render *render.Render
-	// Auth is using [Mailer](https://github.com/ecletus/mailer) to send email, by default, it will print email into console, you need to configure it to send real one
+	// Auth is using [NotifyMailer](https://github.com/ecletus/mailer) to send email, by default, it will print email into console, you need to configure it to send real one
 	Mailer *mailer.Mailer
 	// UserStorer is an interface that defined how to get/save user, Auth provides a default one based on AuthIdentityModel, UserModel's definition
 	UserStorer UserStorerInterface
@@ -46,7 +57,7 @@ type Config struct {
 	Redirector RedirectorInterface
 
 	// LoginHandler defined behaviour when request `{Auth Prefix}/login`, default behaviour defined in http://godoc.org/github.com/ecletus/auth#pkg-variables
-	LoginHandler func(*Context, func(*Context) (*claims.Claims, error))
+	LoginHandler func(*LoginContext, func(*LoginContext) (*claims.Claims, error)) (*claims.Claims, error)
 	// RegisterHandler defined behaviour when request `{Auth Prefix}/register`, default behaviour defined in http://godoc.org/github.com/ecletus/auth#pkg-variables
 	RegisterHandler func(*Context, func(*Context) (*claims.Claims, error))
 	// LogoutHandler defined behaviour when request `{Auth Prefix}/logout`, default behaviour defined in http://godoc.org/github.com/ecletus/auth#pkg-variables
@@ -60,6 +71,12 @@ type Config struct {
 	LoginPageRedirectTo string
 
 	ContextFactory *core.ContextFactory
+
+	LoginCallbacks LoginCallbacks
+
+	signedCallbacks []func(ctx *core.Context, Claims *claims.Claims) error
+
+	UIDFinders UIDFinders
 }
 
 // New initialize Auth
@@ -80,12 +97,6 @@ func New(config *Config) *Auth {
 
 	if config.Render == nil {
 		config.Render = render.New(nil)
-	}
-
-	if config.Mailer == nil {
-		config.Mailer = mailer.New(&mailer.Config{
-			Sender: logger.New(&logger.Config{}),
-		})
 	}
 
 	if config.UserStorer == nil {
@@ -135,7 +146,7 @@ func New(config *Config) *Auth {
 			return auth.URLPrefix
 		},
 		"qor_auth_page": func(context *core.Context) string {
-			v := context.Data().Get(AUTH_URL_KEY + ".page")
+			v := context.Value(AUTH_URL_KEY + ".page")
 			if v != nil {
 				return v.(string)
 			}
@@ -166,7 +177,28 @@ func New(config *Config) *Auth {
 	if err != nil {
 		panic(err)
 	}
-	config.Render.Funcs().AppendValues(auth.Funcs)
+
+	config.Render.FuncsPtr().AppendValues(auth.Funcs)
+	return auth
+}
+
+func (auth *Auth) SignedCallback(f ...func(ctx *core.Context, Claims *claims.Claims) error) *Auth {
+	auth.signedCallbacks = append(auth.signedCallbacks, f...)
+	return auth
+}
+
+func (auth *Auth) BeforeLogin(f ...func(ctx *LoginContext) error) *Auth {
+	auth.LoginCallbacks.Before(f...)
+	return auth
+}
+
+func (auth *Auth) LoginInfo(f ...func(ctx *LoginContext, info *auth_identity.Basic) error) *Auth {
+	auth.LoginCallbacks.Info(f...)
+	return auth
+}
+
+func (auth *Auth) AfterLogged(f ...func(ctx *LoginContext, claims *claims.Claims) error) *Auth {
+	auth.LoginCallbacks.Logged(f...)
 	return auth
 }
 

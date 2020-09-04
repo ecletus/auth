@@ -174,7 +174,7 @@ func (provider Provider) Login(context *auth.Context) {
 		scheme = "http://"
 	}
 
-	requestToken, u, err := consumer.GetRequestTokenAndUrl(scheme + context.Request.Host + context.Auth.AuthURL("twitter/callback"))
+	requestToken, u, err := consumer.GetRequestTokenAndUrl(scheme + context.Request.Host + context.Auth.AuthPath("twitter/callback"))
 
 	if err == nil {
 		// save requestToken into session

@@ -1,188 +1,235 @@
 package password
 
 import (
-	"errors"
-	"fmt"
 	"html/template"
+	"net/mail"
 	"os"
-	"reflect"
 	"time"
+
+	"github.com/moisespsena-go/logging"
+	path_helpers "github.com/moisespsena-go/path-helpers"
+
+	"github.com/ecletus/auth/claims"
+
+	"github.com/ecletus/auth/auth_identity/helpers"
 
 	"github.com/ecletus/auth"
 	"github.com/ecletus/auth/auth_identity"
-	"github.com/ecletus/core/utils"
 	"github.com/ecletus/session"
 	"github.com/moisespsena-go/aorm"
-	"github.com/moisespsena-go/zxcvbn-fb"
-	"github.com/moisespsena-go/error-wrap"
+	zxcvbn_fb "github.com/moisespsena-go/zxcvbn-fb"
 	"golang.org/x/crypto/bcrypt"
 )
 
+const DefaultStrengthLevel = 2
+
+var log = logging.GetOrCreateLogger(path_helpers.GetCalledDir())
+
 type PasswordUpdater struct {
-	UID                     string
-	Token                   string
-	NewPassword             string
-	PasswordConfirm         string
-	CurrentPassword         string
-	CurrentPasswordDisabled bool
-	StrengthDisabled        bool
-	Createable              bool
-	Confirmed               bool
-	UserID                  string
-	AdminUserUID            string
-	AuthIdentityModel       interface{}
-	Provider                *Provider
-	DB                      *aorm.DB
-	T                       func(key string, defaul ...interface{}) string
+	UID                         string
+	Token                       string
+	NewPassword                 string
+	PasswordConfirm             string
+	CurrentPassword             string
+	CurrentPasswordDisabled     bool
+	StrengthDisabled            bool
+	StrengthLevel               int
+	Createable                  bool
+	Confirmed                   bool
+	UserID                      string
+	IsAdmin                     bool
+	AdminUserUID                string
+	AuthIdentityModel           interface{}
+	Provider                    *Provider
+	DB                          *aorm.DB
+	T                           func(key string, defaul ...interface{}) string
+	NotifyPlainPasswordDisabled bool
+	NotifyMailer                UpdatedPasswordNotifier
+	NotifyTo                    []mail.Address
+	NotifyToUserDisabled        bool
 }
 
-func (pu PasswordUpdater) Context(context *auth.Context) error {
-	if pu.CurrentPassword == "" && !pu.CurrentPasswordDisabled {
-		pu.CurrentPassword =
+func (this PasswordUpdater) Context(context *auth.Context) (Claims *claims.Claims, err error) {
+	if this.CurrentPassword == "" && !this.CurrentPasswordDisabled {
+		this.CurrentPassword =
 			context.Request.Form.Get("current_password")
 	}
-	if pu.NewPassword == "" {
-		pu.NewPassword = context.Request.Form.Get("new_password")
+	if this.NewPassword == "" {
+		this.NewPassword = context.Request.Form.Get("new_password")
 	}
-	if pu.PasswordConfirm == "" {
-		pu.PasswordConfirm = context.Request.Form.Get("password_confirm")
-	}
-
-	if pu.AuthIdentityModel == nil {
-		pu.AuthIdentityModel = context.Auth.Config.AuthIdentityModel
+	if this.PasswordConfirm == "" {
+		this.PasswordConfirm = context.Request.Form.Get("password_confirm")
 	}
 
-	if pu.UID == "" {
-		token := pu.Token
+	if this.AuthIdentityModel == nil {
+		this.AuthIdentityModel = context.Auth.Config.AuthIdentityModel
+	}
+
+	if this.UID == "" {
+		token := this.Token
 		if token == "" {
 			token = context.Request.Form.Get("reset_password_token")
 		}
-
-		if claims, err := context.SessionStorer.ValidateClaims(token); err != nil {
-			return err
-		} else if err = claims.Valid(); err != nil {
-			return err
+		if Claims, err = context.SessionStorer.ValidateClaims(token); err != nil {
+			return nil, err
+		} else if err = Claims.Valid(); err != nil {
+			return nil, err
 		} else {
-			pu.UID = claims.Id
-			pu.UserID = claims.UserID
+			this.UID = Claims.Id
+			this.UserID = Claims.UserID
 		}
 	}
 
-	if pu.Provider == nil {
-		pu.Provider, _ = context.Provider.(*Provider)
+	if this.Provider == nil {
+		this.Provider, _ = context.Provider.(*Provider)
 	}
 
-	if pu.DB == nil {
-		pu.DB = context.Site.GetSystemDB().DB
+	if this.DB == nil {
+		this.DB = context.Site.GetSystemDB().DB
 	}
 
-	if pu.T == nil {
-		pu.T = context.Ts
+	if this.T == nil {
+		this.T = context.Ts
 	}
 
-	if err := pu.Update(); err != nil {
-		return err
+	if err := this.Update(context); err != nil {
+		return nil, err
 	}
-	_ = context.SessionStorer.Flash(context.SessionManager(), pu.Success())
-	return nil
+	_ = context.SessionStorer.Flash(context.SessionManager(), this.Success())
+	return
 }
 
-func (pu *PasswordUpdater) Success() session.Message {
-	return session.Message{Message: template.HTML(pu.T(ChangedPasswordFlashMessage)), Type: "success"}
+func (this *PasswordUpdater) Success() session.Message {
+	return session.Message{Message: template.HTML(this.T(ChangedPasswordFlashMessage)), Type: "success"}
 }
 
-func (pu *PasswordUpdater) Update() (err error) {
+func (this *PasswordUpdater) Update(context *auth.Context) (err error) {
+	if this.NewPassword != this.PasswordConfirm {
+		return ErrPasswordsNotMatch
+	}
+
+	if !this.StrengthDisabled && os.Getenv("AGHAPE_AUTH_PASSWORD_STRENGTH_DISABLED") != "true" {
+		result, err := zxcvbn_fb.Zxcvbn(this.NewPassword)
+		if err != nil {
+			return ErrStrengthTestFailed
+		}
+
+		level := this.StrengthLevel
+		if level == 0 {
+			level = DefaultStrengthLevel
+		}
+
+		if result.Score < level {
+			return ErrPasswordTooWeak
+		}
+	}
+
 	var (
-		authInfo = &auth_identity.Basic{}
-		DB       = pu.DB
-		id       = pu.UID
-		provider = pu.Provider
+		identity auth_identity.AuthIdentityInterface
+		authInfo *auth_identity.Basic
+		provider = this.Provider
+		DB       = this.DB
 	)
 
-	if pu.NewPassword != pu.PasswordConfirm {
-		return errors.New(pu.T(auth.I18n("passwords.passwords_not_match")))
-	}
-
-	if !pu.StrengthDisabled && os.Getenv("AGHAPE_AUTH_PASSWORD_STRENGTH_DISABLED") != "true" {
-		result, err := zxcvbn_fb.Zxcvbn(pu.NewPassword)
-		if err != nil {
-			return errwrap.Wrap(err, pu.T(auth.I18n("passwords.strength_test_failed")))
+	if identity, err = helpers.GetIdentity(this.AuthIdentityModel, provider.GetName(), DB, this.UID); err != nil {
+		if err != auth.ErrInvalidAccount {
+			return
 		}
 
-		if result.Score < 3 {
-			return errors.New(pu.T(auth.I18n("passwords.password_too_weak")))
-		}
-	}
-
-	authInfo.Provider = provider.GetName()
-	authInfo.UID = id
-	authIdentity := reflect.New(utils.ModelType(pu.AuthIdentityModel)).Interface().(auth_identity.AuthIdentityInterface)
-
-	if DB.Model(pu.AuthIdentityModel).Where(authInfo).Scan(authIdentity).RecordNotFound() {
-		if !pu.Createable {
+		if !this.Createable {
 			return auth.ErrInvalidAccount
 		}
 
-		authInfo.UserID = pu.UserID
+		authInfo = &auth_identity.Basic{
+			Provider: provider.GetName(),
+			UID:      this.UID,
+			UserID:   this.UserID,
+		}
 
-		if pu.Confirmed {
+		if this.IsAdmin {
+			authInfo.IsAdmin = true
+		}
+
+		if this.Confirmed {
 			now := time.Now()
 			authInfo.ConfirmedAt = &now
 		}
 
-		if authInfo.EncryptedPassword, err = provider.Encryptor.Digest(pu.NewPassword); err != nil {
+		if authInfo.EncryptedPassword, err = provider.Encryptor.Digest(this.NewPassword); err != nil {
 			return err
 		}
 
-		authIdentity.SetAuthBasic(*authInfo)
+		identity = auth_identity.NewIdentityInterface(this.AuthIdentityModel)
+		identity.SetAuthBasic(*authInfo)
 
-		if err = DB.Model(authIdentity).Create(authIdentity).Error; err != nil {
-			return errwrap.Wrap(err, pu.T(auth.I18n("passwords.create_user_identity")))
+		if err = DB.Model(identity).Create(identity).Error; err != nil {
+			return ErrUserIdentityCreationFailed.Cause(err)
 		}
 		return nil
 	}
 
-	authInfo = authIdentity.GetAuthBasic()
-	if !pu.CurrentPasswordDisabled {
-		if pu.CurrentPassword == "" {
-			return errors.New(pu.T(auth.I18n("form.current_password_placeholder")))
+	authInfo = identity.GetAuthBasic()
+	if !this.CurrentPasswordDisabled {
+		if this.CurrentPassword == "" {
+			return ErrCurrentPasswordNotNatch
 		}
 
-		var localAuthInfo = authInfo
+		var currentInfo = authInfo
 
-		if pu.AdminUserUID != "" {
-			localAuthInfo = &auth_identity.Basic{}
-			localAuthInfo.Provider = provider.GetName()
-			localAuthInfo.UID = pu.AdminUserUID
-			localAuthIdentity := reflect.New(utils.ModelType(pu.AuthIdentityModel)).Interface().(auth_identity.AuthIdentityInterface)
+		if this.AdminUserUID != "" {
+			currentInfo = &auth_identity.Basic{}
+			currentInfo.Provider = provider.GetName()
+			currentInfo.UID = this.AdminUserUID
+			currentIdentity := auth_identity.NewIdentityInterface(this.AuthIdentityModel)
 
-			DB := DB.Model(pu.AuthIdentityModel).Where(localAuthInfo).Scan(localAuthIdentity)
-			if DB.Error != nil {
-				return errwrap.Wrap(err, pu.T(auth.I18n("passwords.load_admin_user_failed")))
-			} else if DB.RecordNotFound() {
-				return errwrap.Wrap(err, pu.T(auth.I18n("passwords.admin_user_not_found")))
+			if DB := DB.Model(this.AuthIdentityModel).Where(currentInfo).Scan(currentIdentity); DB.RecordNotFound() {
+				return ErrAdminUserNotFound
+			} else if DB.Error != nil {
+				return ErrLoadAdminUserFailed.Cause(DB.Error)
 			}
-			localAuthInfo = localAuthIdentity.GetAuthBasic()
+			currentInfo = currentIdentity.GetAuthBasic()
 		}
 
-		if err := provider.Encryptor.Compare(localAuthInfo.EncryptedPassword, pu.CurrentPassword); err != nil {
+		if err := provider.Encryptor.Compare(currentInfo.EncryptedPassword, this.CurrentPassword); err != nil {
 			if err == bcrypt.ErrMismatchedHashAndPassword {
-				return fmt.Errorf(pu.T(auth.I18n("passwords.current_password_not_match")))
+				return ErrCurrentPasswordNotNatch
 			} else {
 				return err
 			}
 		}
 	}
 
-	if authInfo.EncryptedPassword, err = provider.Encryptor.Digest(pu.NewPassword); err == nil {
+	if authInfo.EncryptedPassword, err = provider.Encryptor.Digest(this.NewPassword); err == nil {
 		// Confirm account after reset password, as user already click a link from email
 		if provider.Config.Confirmable && authInfo.ConfirmedAt == nil {
 			now := time.Now()
 			authInfo.ConfirmedAt = &now
 		}
-		if err = DB.Model(authIdentity).Save(authIdentity).Error; err != nil {
+		if err = helpers.SaveIdentity(DB, identity); err != nil {
 			return err
 		}
 	}
+
+	if this.NotifyMailer != nil {
+		var (
+			user   auth.User
+			passwd string
+		)
+		if !this.NotifyPlainPasswordDisabled {
+			passwd = this.NewPassword
+		}
+		if !this.NotifyToUserDisabled {
+			user, err = context.Auth.UserStorer.Get(authInfo.ToClaims(), context)
+			if err != nil {
+				log.Warningf("PasswordUpdate.update@UserGetter failed: %v", err.Error())
+				return nil
+			}
+		}
+		if err := this.NotifyMailer.Notify(this.NotifyTo, context, user, passwd); err != nil {
+			log.Warningf("PasswordUpdate.update@Notify failed: %v", err.Error())
+			return nil
+		}
+	}
+
 	return nil
 }

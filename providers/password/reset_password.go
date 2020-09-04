@@ -2,13 +2,16 @@ package password
 
 import (
 	"net/mail"
-	"path"
 	"strings"
+	"time"
+
+	"github.com/moisespsena-go/tzdb"
+
+	"github.com/ecletus/auth/auth_identity/helpers"
 
 	"github.com/ecletus/auth"
 	"github.com/ecletus/auth/auth_identity"
 	"github.com/ecletus/auth/claims"
-	"github.com/ecletus/core/utils"
 	"github.com/ecletus/mailer"
 	"github.com/ecletus/session"
 	"github.com/moisespsena/template/html/template"
@@ -26,86 +29,101 @@ var (
 )
 
 // DefaultResetPasswordMailer default reset password mailer
-var DefaultResetPasswordMailer = func(email string, context *auth.Context, claims *claims.Claims, currentUser interface{}) error {
+var DefaultResetPasswordMailer = func(ctx *auth.Context, claims *claims.Claims, currentUser auth.User, email ...string) error {
 	claims.Subject = "reset_password"
-
-	return context.Auth.Mailer.Send(
-		mailer.Email{
-			TO:      []mail.Address{{Address: email}},
-			Subject: context.Ts(ResetPasswordMailSubject),
+	expireAt := time.Unix(claims.ExpiresAt, 0)
+	if location := currentUser.Schema().Location; location != "" {
+		expireAt = expireAt.In(tzdb.LocationCity(location).Location())
+	}
+	if len(email) == 0 || email[0] == "" {
+		email = []string{currentUser.Schema().Email}
+	}
+	Mailer := mailer.FromSite(ctx.Site)
+	return Mailer.Send(
+		&mailer.Email{
+			Context: ctx,
+			Lang:    ctx.GetI18nContext().Locales(),
+			TO:      []mail.Address{{Address: email[0]}},
+			Subject: ctx.Ts(ResetPasswordMailSubject),
 		}, mailer.Template{
-			Name:    "auth/reset_password",
-			Data:    context,
-			Context: context.Context,
+			Name:    "auth/password/reset_password",
+			Data:    ctx,
+			Context: ctx.Context,
 		}.Funcs(template.FuncMap{
 			"current_user": func() interface{} {
 				return currentUser
 			},
+			"expire_at": func() time.Time {
+				return expireAt
+			},
 			"reset_password_url": func() string {
-				resetPasswordURL := utils.GetAbsURL(context.Request)
-				resetPasswordURL.Path = path.Join(context.Auth.AuthURL("password/edit"), context.SessionStorer.SignedToken(claims))
-				return resetPasswordURL.String()
+				token, err := ctx.SessionStorer.SignedToken(claims)
+				if err != nil {
+					return "{TOKEN ERROR=" + err.Error() + "}"
+				}
+				url := ctx.AuthURL("password/edit", token)
+				return url
 			},
 		}),
 	)
 }
 
-func NewPasswordToken(context *auth.Context, email string) string {
+func NewPasswordToken(ctx *auth.Context, email string) (string, error) {
 	var (
 		authInfo    auth_identity.Basic
-		provider, _ = context.Provider.(*Provider)
+		provider, _ = ctx.Provider.(*Provider)
 	)
 
 	authInfo.Provider = provider.GetName()
 	authInfo.UID = strings.TrimSpace(email)
 	cl := authInfo.ToClaims()
-	token := context.SessionStorer.SignedToken(cl)
-	return token
+	return ctx.SessionStorer.SignedToken(cl)
 }
 
 // DefaultRecoverPasswordHandler default reset password handler
-var DefaultRecoverPasswordHandler = func(context *auth.Context) error {
-	_ = context.Request.ParseForm()
+var DefaultRecoverPasswordHandler = func(ctx *auth.Context) (err error) {
+	_ = ctx.Request.ParseForm()
 
 	var (
-		authInfo    auth_identity.Basic
-		email       = context.Request.Form.Get("email")
-		provider, _ = context.Provider.(*Provider)
+		authInfo    *auth_identity.Basic
+		identity    auth_identity.AuthIdentityInterface
+		identifier  = ctx.Request.Form.Get("email")
+		provider, _ = ctx.Provider.(*Provider)
+		uid         string
 	)
 
-	authInfo.Provider = provider.GetName()
-	authInfo.UID = strings.TrimSpace(email)
+	if uid, err = ctx.Auth.FindUID(ctx, identifier); err != nil {
+		return
+	}
 
-	currentUser, err := context.Auth.UserStorer.Get(authInfo.ToClaims(), context)
+	if identity, err = helpers.GetIdentity(ctx.Auth.AuthIdentityModel, provider.GetName(), ctx.DB(), uid); err != nil {
+		return
+	}
+
+	authInfo = identity.GetAuthBasic()
+	authInfo.Provider = provider.GetName()
+
+	currentUser, err := ctx.Auth.UserStorer.Get(authInfo.ToClaims(), ctx)
 
 	if err != nil {
 		return err
 	}
 
-	err = provider.ResetPasswordMailer(email, context, authInfo.ToClaims(), currentUser)
-
-	if err == nil {
-		_ = context.SessionStorer.Flash(context.SessionManager(), session.Message{Message: context.T(SendChangePasswordMailFlashMessage), Type: "success"})
-		context.Auth.Redirector.Redirect(context.Writer, context.Request, "send_recover_password_mail")
+	Claims := authInfo.ToClaims()
+	Claims.ExpiresAt = time.Now().Add(time.Minute * 30).Unix()
+	if err = provider.ResetPasswordMailer(ctx, Claims, currentUser); err == nil {
+		_ = ctx.SessionStorer.Flash(ctx.SessionManager(), session.Message{Message: ctx.T(SendChangePasswordMailFlashMessage), Type: "success"})
+		ctx.Auth.Redirector.Redirect(ctx.Writer, ctx.Request, "send_recover_password_mail")
 	}
 	return err
 }
 
 // DefaultResetPasswordHandler default reset password handler
-var DefaultResetPasswordHandler = func(context *auth.Context) error {
-	_ = context.Request.ParseForm()
+var DefaultResetPasswordHandler = func(ctx *auth.Context, updatedMailer UpdatedPasswordNotifier) (Claims *claims.Claims, err error) {
+	_ = ctx.Request.ParseForm()
 	pu := &PasswordUpdater{
-		Confirmed:               false,
 		CurrentPasswordDisabled: true,
+		NotifyMailer:            updatedMailer,
 	}
-	return pu.Context(context)
-}
-
-// DefaultResetPasswordHandler default reset password handler
-var DefaultUpdatePasswordHandler = func(context *auth.Context) error {
-	_ = context.Request.ParseForm()
-	pu := &PasswordUpdater{
-		StrengthDisabled: true,
-	}
-	return pu.Context(context)
+	return pu.Context(ctx)
 }

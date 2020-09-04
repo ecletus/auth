@@ -3,11 +3,12 @@ package auth
 import (
 	"errors"
 	"fmt"
-
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/ecletus/auth/claims"
 	"github.com/ecletus/session"
 )
+
+var ErrNoSession = errors.New("no session")
 
 // SessionStorerInterface session storer interface for Auth
 type SessionStorerInterface interface {
@@ -24,7 +25,7 @@ type SessionStorerInterface interface {
 	Flashes(manager session.RequestSessionManager) []session.Message
 
 	// SignedToken generate signed token with Claims
-	SignedToken(claims *claims.Claims) string
+	SignedToken(claims *claims.Claims) (string, error)
 	// ValidateClaims validate auth token
 	ValidateClaims(tokenString string) (*claims.Claims, error)
 }
@@ -38,19 +39,21 @@ type SessionStorer struct {
 
 // Get get claims from request
 func (sessionStorer *SessionStorer) Get(manager session.RequestSessionManager) (*claims.Claims, error) {
-	tokenString := manager.Request().Header.Get("Authorization")
+	tokenString := manager.Get(sessionStorer.SessionName)
 
-	// Get Token from Cookie
 	if tokenString == "" {
-		tokenString = manager.Get(sessionStorer.SessionName)
+		return nil, ErrNoSession
 	}
 
 	return sessionStorer.ValidateClaims(tokenString)
 }
 
 // Update update claims with session manager
-func (sessionStorer *SessionStorer) Update(manager session.RequestSessionManager, claims *claims.Claims) error {
-	token := sessionStorer.SignedToken(claims)
+func (sessionStorer *SessionStorer) Update(manager session.RequestSessionManager, claims *claims.Claims) (err error) {
+	var token string
+	if token, err = sessionStorer.SignedToken(claims); err != nil {
+		return
+	}
 	return manager.Add(sessionStorer.SessionName, token)
 }
 
@@ -71,11 +74,9 @@ func (sessionStorer *SessionStorer) Flashes(manager session.RequestSessionManage
 }
 
 // SignedToken generate signed token with Claims
-func (sessionStorer *SessionStorer) SignedToken(claims *claims.Claims) string {
+func (sessionStorer *SessionStorer) SignedToken(claims *claims.Claims) (string, error) {
 	token := jwt.NewWithClaims(sessionStorer.SigningMethod, claims)
-	signedToken, _ := token.SignedString([]byte(sessionStorer.SignedString))
-
-	return signedToken
+	return token.SignedString([]byte(sessionStorer.SignedString))
 }
 
 // ValidateClaims validate auth token

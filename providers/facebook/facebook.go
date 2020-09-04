@@ -175,7 +175,7 @@ func (provider FacebookProvider) OAuthConfig(context *auth.Context) *oauth2.Conf
 			AuthURL:  config.AuthorizeURL,
 			TokenURL: config.TokenURL,
 		},
-		RedirectURL: scheme + context.Request.Host + context.Auth.AuthURL("facebook/callback"),
+		RedirectURL: scheme + context.Request.Host + context.Auth.AuthPath("facebook/callback"),
 		Scopes:      config.Scopes,
 	}
 }
@@ -184,7 +184,7 @@ func (provider FacebookProvider) OAuthConfig(context *auth.Context) *oauth2.Conf
 func (provider FacebookProvider) Login(context *auth.Context) {
 	claims := claims.Claims{}
 	claims.Subject = "state"
-	signedToken := context.Auth.SessionStorer.SignedToken(&claims)
+	signedToken, _ := context.Auth.SessionStorer.SignedToken(&claims)
 
 	url := provider.OAuthConfig(context).AuthCodeURL(signedToken)
 	http.Redirect(context.Writer, context.Request, url, http.StatusFound)

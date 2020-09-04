@@ -1,0 +1,9 @@
+<p>Olá {{you.Name}}!</p>
+{{if has_password}}
+    <p>Esta é a sua nova senha: <code>{{password}}</code></p>
+{{else}}
+    <p>A sua senha foi alterada.</p>
+{{end}}
+<p>Para acessar o seu painel de usuário, click sobre o link abaixo ou copie e cole-o na barra de endereços do seu navegador:</p>
+<p><a href="{{login_url}}">{{login_url}}</a></p>
+<p><strong>NÃO RESPONDA ESTE E-MAIL</strong>, ele é apenas uma mensagem informativa.</p>

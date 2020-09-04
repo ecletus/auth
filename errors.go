@@ -1,12 +1,11 @@
 package auth
 
-import "errors"
+import "github.com/ecletus/auth/auth_errors"
 
-var (
-	// ErrInvalidPassword invalid password error
-	ErrInvalidPassword = errors.New("invalid password")
-	// ErrInvalidAccount invalid account error
-	ErrInvalidAccount = errors.New("invalid account")
-	// ErrUnauthorized unauthorized error
-	ErrUnauthorized = errors.New("Unauthorized")
+const (
+	ErrInvalidPassword = auth_errors.ErrInvalidPassword
+	ErrInvalidAccount = auth_errors.ErrInvalidAccount
+	ErrUnauthorized = auth_errors.ErrUnauthorized
+	ErrUidBlank = auth_errors.ErrUidBlank
+	ErrMaximumNumberOfAccessesReached = auth_errors.ErrMaximumNumberOfAccessesReached
 )

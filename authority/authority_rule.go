@@ -39,11 +39,15 @@ func (authority Authority) Handler(rule Rule) roles.Checker {
 
 // Register register authority rule into Role
 func (authority *Authority) Register(name string, rule Rule) {
-	authority.Config.Role.Register(name, authority.Handler(rule))
+	authority.Config.Role.Register(roles.NewDescriptor(name, authority.Handler(rule)))
 }
 
 // Allow Check allow role or not
 func (authority *Authority) Allow(role string, req *http.Request) bool {
-	currentUser := authority.Auth.GetCurrentUser(req)
+	currentUser, err := authority.Auth.GetCurrentUser(req)
+	if err != nil {
+		log.Error(err.Error())
+		return false
+	}
 	return authority.Role.HasRole(req, currentUser, role)
 }

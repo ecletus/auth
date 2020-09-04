@@ -176,7 +176,7 @@ func (provider GoogleProvider) OAuthConfig(context *auth.Context) *oauth2.Config
 			AuthURL:  config.AuthorizeURL,
 			TokenURL: config.TokenURL,
 		},
-		RedirectURL: scheme + context.Request.Host + context.Auth.AuthURL("google/callback"),
+		RedirectURL: scheme + context.Request.Host + context.Auth.AuthPath("google/callback"),
 		Scopes:      config.Scopes,
 	}
 }
@@ -185,7 +185,7 @@ func (provider GoogleProvider) OAuthConfig(context *auth.Context) *oauth2.Config
 func (provider GoogleProvider) Login(context *auth.Context) {
 	claims := claims.Claims{}
 	claims.Subject = "state"
-	signedToken := context.Auth.SessionStorer.SignedToken(&claims)
+	signedToken, _ := context.Auth.SessionStorer.SignedToken(&claims)
 
 	url := provider.OAuthConfig(context).AuthCodeURL(signedToken)
 	http.Redirect(context.Writer, context.Request, url, http.StatusFound)

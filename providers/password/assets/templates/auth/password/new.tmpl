@@ -1,23 +1,35 @@
+<link rel="stylesheet" media="all" href="{{static_url "/auth/styles/qor_auth.css"}}" />
 <div style="margin:auto; text-align: center;">
-  <h2>{{t (.I18n "links.forgot_password") "forgot your password?"}}</h2>
+<div class="container qor-auth">
+  <div class="qor-auth-box">
+    <h1>{{t (.I18n "links.forgot_password") "forgot your password?"}}</h1>
+    <p>{{ t (.I18n "passwords.forgot_password_desc") }}</p>
 
-  {{$flashes := .Flashes}}
-  {{if $flashes}}
-    <ul>
-      {{range $flash := $flashes}}
-        <li>{{$flash.Message}}</li>
-      {{end}}
-    </ul>
-  {{end}}
+    {{$flashes := .Flashes}}
+    {{if $flashes}}
+      <ul>
+        {{range $flash := $flashes}}
+          <li>{{$flash.Message}}</li>
+        {{end}}
+      </ul>
+    {{end}}
 
-  <div>
-    <form action="{{.AuthURL "password/recover"}}" method="POST">
-      {{t ".form.email"}}:  <input name="email">
-      <input type="submit">
-    </form>
+    <div>
+      <form action="{{.AuthPath "password/recover"}}" method="POST">
+          <ul class="auth-form">
+              <li>
+                  <label for="email" style="text-align: left">{{t (.Auth.I18n "form.email") }}:</label> <input name="email" id="email">
+              </li>
+              <li>
+                  <button type="submit" class="button button__primary">{{t (.Auth.I18n "form.new_password")}}</button>
+              </li>
+          </ul>
+      </form>
+    </div>
+
+    <div>
+      <a href="{{.AuthURL "login"}}">{{t (.Auth.I18n "or_sign_in")}}</a>
+    </div>
   </div>
-
-  <div>
-    <a href="{{.AuthURL "login"}}">{{t (printf "%v." .AuthI18nGroup)}}</a>
-  </div>
+</div>
 </div>
