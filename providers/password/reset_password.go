@@ -5,15 +5,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moisespsena-go/bid"
 	"github.com/moisespsena-go/tzdb"
 
 	"github.com/ecletus/auth/auth_identity/helpers"
+
+	"github.com/ecletus/session"
 
 	"github.com/ecletus/auth"
 	"github.com/ecletus/auth/auth_identity"
 	"github.com/ecletus/auth/claims"
 	"github.com/ecletus/mailer"
-	"github.com/ecletus/session"
 	"github.com/moisespsena/template/html/template"
 )
 
@@ -74,6 +76,7 @@ func NewPasswordToken(ctx *auth.Context, email string) (string, error) {
 		provider, _ = ctx.Provider.(*Provider)
 	)
 
+	authInfo.ID = bid.New()
 	authInfo.Provider = provider.GetName()
 	authInfo.UID = strings.TrimSpace(email)
 	cl := authInfo.ToClaims()

@@ -33,9 +33,9 @@ func GetIdentity(authIdentityModel interface{}, providerName string, DB *aorm.DB
 }
 
 func SaveIdentity(DB *aorm.DB, identity auth_identity.AuthIdentityInterface) error {
-	return DB.Model(identity).Save(identity).Error
+	return DB.ModelStruct(aorm.StructOf(identity), identity).Save(identity).Error
 }
 
 func DeleteIdentity(DB *aorm.DB, identity auth_identity.AuthIdentityInterface) error {
-	return DB.Model(identity).Delete(identity).Error
+	return DB.ModelStruct(aorm.StructOf(identity), identity).Delete(identity).Error
 }

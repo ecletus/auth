@@ -51,7 +51,7 @@ var DefaultAuthorizeHandler = func(ctx *auth.LoginContext) (Claims *claims.Claim
 		}
 	}
 
-	if err = provider.Encryptor.Compare(authInfo.EncryptedPassword, password); err == nil {
+	if err = provider.Encryptor.Compare(string(authInfo.EncryptedPassword), password); err == nil {
 		return authInfo.ToClaims(), nil
 	}
 
@@ -88,7 +88,9 @@ var DefaultRegisterHandler = func(context *auth.Context) (Claims *claims.Claims,
 		return nil, auth.ErrInvalidAccount
 	}
 
-	if authInfo.EncryptedPassword, err = provider.Encryptor.Digest(strings.TrimSpace(req.Form.Get("password"))); err == nil {
+	var ep string
+	if ep, err = provider.Encryptor.Digest(strings.TrimSpace(req.Form.Get("password"))); err == nil {
+		authInfo.EncryptedPassword = aorm.ProtectedString(ep)
 		schema.Provider = authInfo.Provider
 		schema.UID = authInfo.UID
 		schema.Email = authInfo.UID

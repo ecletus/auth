@@ -53,9 +53,9 @@ func (au *AuthIdentity) GetAuthBasic() *Basic {
 // Basic basic information about auth identity
 type Basic struct {
 	aorm.Model
-	Provider          string // phone, email, wechat, github...
-	UID               string `sql:"column:uid;unique"`
-	EncryptedPassword string
+	Provider          string               // phone, email, wechat, github...
+	UID               string               `sql:"column:uid;unique"`
+	EncryptedPassword aorm.ProtectedString `aorm:"type:text"`
 	UserID            string
 	ConfirmedAt       *time.Time
 	ExpireAt          *time.Time

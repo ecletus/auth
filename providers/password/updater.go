@@ -13,12 +13,13 @@ import (
 
 	"github.com/ecletus/auth/auth_identity/helpers"
 
-	"github.com/ecletus/auth"
-	"github.com/ecletus/auth/auth_identity"
 	"github.com/ecletus/session"
-	"github.com/moisespsena-go/aorm"
 	zxcvbn_fb "github.com/moisespsena-go/zxcvbn-fb"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/ecletus/auth"
+	"github.com/ecletus/auth/auth_identity"
+	"github.com/moisespsena-go/aorm"
 )
 
 const DefaultStrengthLevel = 2
@@ -155,9 +156,11 @@ func (this *PasswordUpdater) Update(context *auth.Context) (err error) {
 			authInfo.ConfirmedAt = &now
 		}
 
-		if authInfo.EncryptedPassword, err = provider.Encryptor.Digest(this.NewPassword); err != nil {
+		var ep string
+		if ep, err = provider.Encryptor.Digest(this.NewPassword); err != nil {
 			return err
 		}
+		authInfo.EncryptedPassword = aorm.ProtectedString(ep)
 
 		identity = auth_identity.NewIdentityInterface(this.AuthIdentityModel)
 		identity.SetAuthBasic(*authInfo)
@@ -190,7 +193,7 @@ func (this *PasswordUpdater) Update(context *auth.Context) (err error) {
 			currentInfo = currentIdentity.GetAuthBasic()
 		}
 
-		if err := provider.Encryptor.Compare(currentInfo.EncryptedPassword, this.CurrentPassword); err != nil {
+		if err := provider.Encryptor.Compare(string(currentInfo.EncryptedPassword), this.CurrentPassword); err != nil {
 			if err == bcrypt.ErrMismatchedHashAndPassword {
 				return ErrCurrentPasswordNotNatch
 			} else {
@@ -199,7 +202,9 @@ func (this *PasswordUpdater) Update(context *auth.Context) (err error) {
 		}
 	}
 
-	if authInfo.EncryptedPassword, err = provider.Encryptor.Digest(this.NewPassword); err == nil {
+	var ep string
+	if ep, err = provider.Encryptor.Digest(this.NewPassword); err == nil {
+		authInfo.EncryptedPassword = aorm.ProtectedString(ep)
 		// Confirm account after reset password, as user already click a link from email
 		if provider.Config.Confirmable && authInfo.ConfirmedAt == nil {
 			now := time.Now()
